@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom';
 import Header from './Header.js';
 import Footer from './Footer.js';
+import CartDrawer from './CartDrawer.js';
 
 export default function Layout() {
   return (
@@ -10,6 +11,7 @@ export default function Layout() {
         <Outlet />
       </main>
       <Footer />
+      <CartDrawer />
     </div>
   );
 }

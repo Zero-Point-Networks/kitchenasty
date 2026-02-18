@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useCart } from '../context/CartContext.js';
 
 interface OptionValue {
   id: string;
@@ -42,6 +43,7 @@ interface Props {
 }
 
 export default function MenuItemModal({ itemId, onClose }: Props) {
+  const { addItem } = useCart();
   const [item, setItem] = useState<MenuItemDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -104,6 +106,30 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
       }
       return { ...prev, [optionId]: [...current, valueId] };
     });
+  }
+
+  function handleAddToCart() {
+    if (!item) return;
+    const cartOptions = item.options.flatMap((opt) => {
+      const selected = selections[opt.id] || [];
+      return opt.values
+        .filter((v) => selected.includes(v.id))
+        .map((v) => ({
+          optionId: opt.id,
+          optionName: opt.name,
+          valueId: v.id,
+          valueName: v.name,
+          priceModifier: v.priceModifier,
+        }));
+    });
+    addItem({
+      menuItemId: item.id,
+      name: item.name,
+      price: item.price,
+      quantity,
+      options: cartOptions,
+    });
+    onClose();
   }
 
   function calculateTotal(): number {
@@ -280,6 +306,7 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
                     </button>
                   </div>
                   <button
+                    onClick={handleAddToCart}
                     className="bg-primary-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
                   >
                     Add to Cart &mdash; ${calculateTotal().toFixed(2)}

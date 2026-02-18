@@ -21,16 +21,18 @@ A self-hosted restaurant online ordering, table reservation, and management syst
 - **Admin panel** — Sidebar navigation, dashboard with metric cards, location list and form editor
 - **Customer storefront** — Responsive layout with header/footer, location selector, customer auth (login/register/account), 404 page
 - **Menu browsing** — Category sidebar with item counts, search with debounce, responsive grid of item cards, item detail modal with option selectors, quantity picker, and price calculation
+- **Cart & checkout** — Shopping cart drawer with quantity controls, checkout page with delivery/pickup toggle, address entry, scheduling, order notes, coupon code, and order summary with tax/fees
+- **Order API** — Order creation with validation, stock tracking, guest checkout support, order listing/detail for staff, status updates
 - **Menu management** — Category CRUD with nesting, menu item CRUD with options/allergens/mealtimes, stock tracking
 - **Table management** — CRUD for tables per location with capacity tracking and reservation protection
-- **Full test suite** — Unit, integration, and E2E tests (205 tests)
+- **Full test suite** — Unit, integration, and E2E tests (232 tests)
 - **CI/CD pipeline** — GitHub Actions with lint, test, audit, build, and artifact packaging
 
 ### Planned
 
 - Menu item image upload
-- Shopping cart and checkout with Stripe payments
-- Order management with kitchen display and real-time status updates
+- Stripe payment integration
+- Order management admin UI with kitchen display and real-time status updates
 - Table reservation system
 - Coupons, reviews, and analytics dashboard
 - Email notifications and multi-language support
@@ -280,6 +282,14 @@ Coupon, Allergen, Mealtime, CustomerGroup
 | POST | `/api/menu/mealtimes` | Manager+ | Create mealtime |
 | PATCH | `/api/menu/mealtimes/:id` | Manager+ | Update mealtime |
 | DELETE | `/api/menu/mealtimes/:id` | Super Admin | Delete mealtime |
+
+### Orders
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/orders` | Optional | Create order (guest or authenticated) |
+| GET | `/api/orders` | Staff | List orders (paginated, filterable) |
+| GET | `/api/orders/:id` | Any | Get order detail |
+| PATCH | `/api/orders/:id/status` | Staff | Update order status |
 
 ---
 

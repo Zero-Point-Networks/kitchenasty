@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
 import locationRoutes from './routes/location.routes.js';
 import menuRoutes from './routes/menu.routes.js';
+import orderRoutes from './routes/order.routes.js';
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ export function createApp() {
   app.use('/api/auth', authRoutes);
   app.use('/api/locations', locationRoutes);
   app.use('/api/menu', menuRoutes);
+  app.use('/api/orders', orderRoutes);
 
   // 404 handler
   app.use((_req, res) => {
