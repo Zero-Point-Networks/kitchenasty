@@ -10,10 +10,17 @@
     "dev:admin": "npm run dev -w packages/admin",
     "dev:storefront": "npm run dev -w packages/storefront",
     "build": "npm run build -w packages/shared && npm run build -w packages/server && npm run build -w packages/admin && npm run build -w packages/storefront",
-    "lint": "eslint packages/*/src --ext .ts,.tsx"
+    "lint": "eslint packages/*/src --ext .ts,.tsx",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "npm run test -w packages/shared && npm run test:unit -w packages/server",
+    "test:integration": "npm run test:integration -w packages/server",
+    "test:e2e": "npx playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/node": "^22.0.0",
+    "playwright": "^1.58.2",
+    "prisma": "^6.19.2",
     "typescript": "^5.7.0"
   }
 }
