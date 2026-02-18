@@ -26,13 +26,14 @@ A self-hosted restaurant online ordering, table reservation, and management syst
 - **Stripe payments** — Payment intent creation, webhook handler for payment confirmation/failure, cash on delivery option, payment record tracking
 - **Menu management** — Category CRUD with nesting, menu item CRUD with options/allergens/mealtimes, stock tracking
 - **Table management** — CRUD for tables per location with capacity tracking and reservation protection
-- **Full test suite** — Unit, integration, and E2E tests (246 tests)
+- **Order management** — Admin order list with status/type filters, order detail view with items/totals, status workflow controls
+- **Full test suite** — Unit, integration, and E2E tests (258 tests)
 - **CI/CD pipeline** — GitHub Actions with lint, test, audit, build, and artifact packaging
 
 ### Planned
 
 - Menu item image upload
-- Order management admin UI with kitchen display and real-time status updates
+- Kitchen display view and real-time order status updates
 - Table reservation system
 - Coupons, reviews, and analytics dashboard
 - Email notifications and multi-language support
