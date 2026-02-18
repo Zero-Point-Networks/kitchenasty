@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:tastyigniter.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api-docs.tastyigniter.com)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}

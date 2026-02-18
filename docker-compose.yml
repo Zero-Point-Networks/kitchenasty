@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: kitchenasty-db
+    environment:
+      POSTGRES_USER: kitchenasty
+      POSTGRES_PASSWORD: kitchenasty
+      POSTGRES_DB: kitchenasty
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

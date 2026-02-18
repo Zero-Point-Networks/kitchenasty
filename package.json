@@ -1,0 +1,19 @@
+{
+  "name": "kitchenasty",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev -w packages/server",
+    "dev:admin": "npm run dev -w packages/admin",
+    "dev:storefront": "npm run dev -w packages/storefront",
+    "build": "npm run build -w packages/shared && npm run build -w packages/server && npm run build -w packages/admin && npm run build -w packages/storefront",
+    "lint": "eslint packages/*/src --ext .ts,.tsx"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
