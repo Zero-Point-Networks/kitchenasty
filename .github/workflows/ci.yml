@@ -63,6 +63,22 @@ jobs:
   test-e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: kitchenasty
+          POSTGRES_PASSWORD: kitchenasty
+          POSTGRES_DB: kitchenasty
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kitchenasty"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://kitchenasty:kitchenasty@localhost:5432/kitchenasty
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -70,12 +86,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Generate Prisma client
+        run: npx -w packages/server prisma generate --schema ../../prisma/schema.prisma
+      - name: Push schema to database
+        run: npx -w packages/server prisma db push --schema ../../prisma/schema.prisma --skip-generate
+      - name: Seed database
+        run: npx tsx prisma/seed.ts
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
       - name: Run E2E tests
         run: npx playwright test
         env:
           CI: true
+          PORT: 3000
+          JWT_SECRET: test-secret
+          CORS_ORIGINS: http://localhost:5173,http://localhost:5174
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
