@@ -12,3 +12,4 @@ playwright-report/
 .vite/
 *.tsbuildinfo
 uploads/
+.intlayer/
