@@ -66,6 +66,13 @@ KitchenAsty enables restaurants, cafes, and takeaways to accept online orders fo
 - Table assignment with capacity tracking and reservation protection
 - Customer reviews (1-5 stars) with admin moderation (approve/reject)
 
+### Staff Management
+
+- Three-tier role system: Super Admin, Manager, Staff
+- Email-based staff invitation with secure single-use tokens (7-day expiry)
+- Role-based admin navigation — each role sees only their permitted pages
+- Staff CRUD: list, search, filter by role, edit, activate/deactivate
+
 ### Analytics & Automation
 
 - Dashboard with real-time metrics: orders, revenue, reservations, customers
