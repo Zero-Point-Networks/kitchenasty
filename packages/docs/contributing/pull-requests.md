@@ -1,21 +1,21 @@
-# Pull Requests
+# 🔀 Pull Requests
 
-## Branch Naming
+## 🌿 Branch Naming
 
 Use descriptive branch names with a prefix:
 
 | Prefix | Use |
 |--------|-----|
-| `feat/` | New feature |
-| `fix/` | Bug fix |
-| `docs/` | Documentation changes |
-| `refactor/` | Code refactoring |
-| `test/` | Adding or updating tests |
-| `chore/` | Maintenance, dependency updates |
+| 🆕 `feat/` | New feature |
+| 🐛 `fix/` | Bug fix |
+| 📝 `docs/` | Documentation changes |
+| ♻️ `refactor/` | Code refactoring |
+| 🧪 `test/` | Adding or updating tests |
+| 🔧 `chore/` | Maintenance, dependency updates |
 
 Examples: `feat/table-reservations`, `fix/order-total-calculation`, `docs/api-reference`
 
-## Conventional Commits
+## 📝 Conventional Commits
 
 Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages:
 
@@ -35,30 +35,30 @@ feat(reservations): add availability check endpoint
 fix(payments): handle Stripe webhook signature verification
 ```
 
-## PR Checklist
+## ✅ PR Checklist
 
 Before submitting a pull request, ensure:
 
-- [ ] Code compiles (`npx tsc --noEmit`)
-- [ ] Unit tests pass (`npm run test:unit`)
-- [ ] Integration tests pass (`npm run test:integration`)
-- [ ] New features have tests
-- [ ] API changes are documented
-- [ ] No `console.log` statements left in
-- [ ] Environment variables are documented in `.env.example`
+- [ ] 🔨 Code compiles (`npx tsc --noEmit`)
+- [ ] 🧩 Unit tests pass (`npm run test:unit`)
+- [ ] 🔗 Integration tests pass (`npm run test:integration`)
+- [ ] 🧪 New features have tests
+- [ ] 📚 API changes are documented
+- [ ] 🚫 No `console.log` statements left in
+- [ ] 📋 Environment variables are documented in `.env.example`
 
-## Review Process
+## 👀 Review Process
 
-1. Open a PR against `main`
-2. CI pipeline runs automatically
-3. At least one approval is required
-4. All CI checks must pass
-5. Merge with squash or rebase (keep a clean history)
+1. 📤 Open a PR against `main`
+2. 🤖 CI pipeline runs automatically
+3. ✅ At least one approval is required
+4. 🟢 All CI checks must pass
+5. 🔀 Merge with squash or rebase (keep a clean history)
 
-## What to Include in a PR Description
+## 📄 What to Include in a PR Description
 
-- **What** — Brief description of the change
-- **Why** — Motivation or issue being solved
-- **How** — Key implementation decisions
-- **Testing** — How the change was tested
-- **Screenshots** — For UI changes
+- 📌 **What** — Brief description of the change
+- 💡 **Why** — Motivation or issue being solved
+- 🔧 **How** — Key implementation decisions
+- 🧪 **Testing** — How the change was tested
+- 📸 **Screenshots** — For UI changes
