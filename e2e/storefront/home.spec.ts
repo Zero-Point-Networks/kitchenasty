@@ -30,7 +30,7 @@ test.describe('Storefront Home Page', () => {
   test('displays hero CTA buttons', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('link', { name: 'View Menu' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Find a Location' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Find Location' })).toBeVisible();
   });
 
   test('displays feature cards', async ({ page }) => {
