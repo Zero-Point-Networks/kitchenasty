@@ -83,6 +83,7 @@ jobs:
       DATABASE_URL: postgresql://kitchenasty:kitchenasty@localhost:5432/kitchenasty
       JWT_SECRET: test-secret
       PORT: 3000
+      NODE_ENV: test
       CORS_ORIGINS: http://localhost:5173,http://localhost:5174
     steps:
       - uses: actions/checkout@v4
