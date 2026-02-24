@@ -1,0 +1,9 @@
+demo.kitchenasty.com {
+	handle_path /admin/* {
+		reverse_proxy admin:80
+	}
+
+	handle {
+		reverse_proxy storefront:80
+	}
+}
