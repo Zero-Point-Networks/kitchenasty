@@ -73,7 +73,7 @@ jobs:
           host: 217.154.26.121
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "deploy/docker-compose.demo.yml,deploy/Caddyfile"
+          source: "deploy/docker-compose.demo.yml,deploy/Caddyfile,deploy/Dockerfile.caddy"
           target: /opt/kitchenasty
           strip_components: 1
 
@@ -95,9 +95,10 @@ jobs:
               FIRST_DEPLOY=true
             fi
 
-            # Set image tag and pull
+            # Set image tag and pull/build
             export TAG=${{ steps.tag.outputs.version }}
-            docker compose -f docker-compose.demo.yml pull
+            docker compose -f docker-compose.demo.yml pull --ignore-buildable
+            docker compose -f docker-compose.demo.yml build caddy
             docker compose -f docker-compose.demo.yml up -d
 
             # Wait for server to be ready

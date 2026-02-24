@@ -10,11 +10,11 @@ hero:
       text: 🚀 Get Started
       link: /guide/introduction
     - theme: alt
+      text: 🌐 Live Demo
+      link: https://demo.kitchenasty.com
+    - theme: alt
       text: 🖥️ Self-Hosting Guide
       link: /self-hosting/overview
-    - theme: alt
-      text: 📱 Mobile App
-      link: /mobile-app/overview
 
 features:
   - icon: 🛒

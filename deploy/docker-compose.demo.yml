@@ -33,7 +33,9 @@ services:
       - server
 
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
     restart: unless-stopped
     dns:
       - 8.8.8.8

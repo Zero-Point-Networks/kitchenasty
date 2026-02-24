@@ -1,4 +1,13 @@
 demo.kitchenasty.com {
+	# Rate limiting: 10 requests/second per IP, burst of 20
+	rate_limit {
+		zone demo_limit {
+			key {remote_host}
+			events 10
+			window 1s
+		}
+	}
+
 	handle /admin {
 		redir /admin/ permanent
 	}
