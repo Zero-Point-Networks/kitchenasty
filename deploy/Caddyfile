@@ -1,4 +1,8 @@
 demo.kitchenasty.com {
+	handle /admin {
+		redir /admin/ permanent
+	}
+
 	handle_path /admin/* {
 		reverse_proxy admin:80
 	}
