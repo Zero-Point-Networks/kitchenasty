@@ -25,14 +25,18 @@ test.describe('Storefront Menu Page', () => {
 
   test('navigating to menu from header', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('navigation').getByRole('link', { name: 'Menu' }).click();
-    await expect(page).toHaveURL(/\/menu/);
+    // Retry the click in case the template swap detaches the nav element
+    await expect(async () => {
+      await page.getByRole('navigation').getByRole('link', { name: 'Menu' }).click();
+      await expect(page).toHaveURL(/\/menu/, { timeout: 2000 });
+    }).toPass({ timeout: 10000 });
     await expect(page.getByRole('heading', { name: 'Our Menu' })).toBeVisible();
   });
 
   test('navigating to menu from home hero', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('main').getByRole('link', { name: 'View Menu' }).click();
+    // CTA text comes from DB seed — accept either seeded or default
+    await page.getByRole('main').getByRole('link', { name: /View Menu|Explore Our Menu/ }).click();
     await expect(page).toHaveURL(/\/menu/);
   });
 

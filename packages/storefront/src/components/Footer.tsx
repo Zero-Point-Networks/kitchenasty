@@ -1,8 +1,11 @@
+import { Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext.js';
+import { footerVariants } from '../templates/footers/index.js';
+import type { TemplateId } from '../templates/index.js';
 
-export default function Footer() {
+function ClassicFooter() {
   const { t } = useTranslation();
   const { settings } = useTheme();
 
@@ -68,4 +71,20 @@ export default function Footer() {
       </div>
     </footer>
   );
+}
+
+export default function Footer() {
+  const { settings } = useTheme();
+  const templateId = (settings.storefrontTemplate || 'classic') as TemplateId;
+  const VariantFooter = footerVariants[templateId];
+
+  if (VariantFooter) {
+    return (
+      <Suspense fallback={<div className="h-32 bg-gray-900" />}>
+        <VariantFooter />
+      </Suspense>
+    );
+  }
+
+  return <ClassicFooter />;
 }
