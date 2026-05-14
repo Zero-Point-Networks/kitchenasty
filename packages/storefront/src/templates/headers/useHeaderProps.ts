@@ -15,10 +15,8 @@ export function useHeaderProps() {
 
   const navLinks = [
     { to: '/', label: t('nav.home') },
-    { to: '/locations', label: t('nav.locations') },
     { to: '/menu', label: t('nav.menu') },
-    { to: '/gallery', label: t('nav.gallery') },
-    { to: '/reservations', label: t('nav.reservations') },
+    { to: '/locations', label: t('nav.locations') },
   ];
 
   function isActive(path: string) {

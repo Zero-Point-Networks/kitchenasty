@@ -37,6 +37,10 @@ export default function Checkout() {
   const [isBusy, setIsBusy] = useState(false);
   const [busyMessage, setBusyMessage] = useState('');
 
+  // Next-day cutoff mode: when any active zone has a cutoffTime, the storefront
+  // forces scheduled orders for the next available lunch slot.
+  const [nextDayMode, setNextDayMode] = useState(false);
+
   // Loyalty points
   const [loyaltyBalance, setLoyaltyBalance] = useState(0);
   const [loyaltyRedeem, setLoyaltyRedeem] = useState(0);
@@ -46,18 +50,29 @@ export default function Checkout() {
   const currentDeliveryFee = orderType === 'delivery' ? deliveryFee : 0;
   const total = subtotal + tax + currentDeliveryFee - loyaltyDiscount;
 
-  // Check busy mode on mount
+  // Check busy mode and next-day cutoff config on mount
   useEffect(() => {
-    fetch('/api/locations')
-      .then((res) => res.json())
-      .then((data) => {
-        const loc = data.data?.[0];
-        if (loc?.isBusy) {
+    (async () => {
+      try {
+        const locRes = await fetch('/api/locations');
+        const locJson = await locRes.json();
+        const loc = locJson.data?.[0];
+        if (!loc) return;
+        if (loc.isBusy) {
           setIsBusy(true);
           setBusyMessage(loc.busyMessage || 'This location is currently not accepting orders.');
         }
-      })
-      .catch(() => {});
+        const zoneRes = await fetch(`/api/locations/${loc.id}/delivery-zones`);
+        const zoneJson = await zoneRes.json();
+        const hasCutoff = (zoneJson.data ?? []).some((z: { isActive: boolean; cutoffTime: string | null }) => z.isActive && z.cutoffTime);
+        if (hasCutoff) {
+          setNextDayMode(true);
+          setScheduledAt(getNextLunchSlot());
+        }
+      } catch {
+        // ignore
+      }
+    })();
   }, []);
 
   // Fetch loyalty balance for logged-in users
@@ -253,37 +268,56 @@ export default function Checkout() {
 
           {/* Schedule */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('checkout.scheduling')}</h2>
-            <div className="space-y-3">
-              <label className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name="schedule"
-                  checked={!scheduledAt}
-                  onChange={() => setScheduledAt('')}
-                  className="accent-primary-600"
-                />
-                <span className="text-sm text-gray-700">{t('checkout.asap')}</span>
-              </label>
-              <label className="flex items-center gap-3">
-                <input
-                  type="radio"
-                  name="schedule"
-                  checked={!!scheduledAt}
-                  onChange={() => setScheduledAt(getDefaultScheduleTime())}
-                  className="accent-primary-600"
-                />
-                <span className="text-sm text-gray-700">{t('checkout.scheduled')}</span>
-              </label>
-              {scheduledAt && (
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              {nextDayMode
+                ? t('checkout.nextDayHeading', { defaultValue: 'Delivery slot' })
+                : t('checkout.scheduling')}
+            </h2>
+            {nextDayMode ? (
+              <div className="space-y-2">
                 <input
                   type="datetime-local"
+                  required
                   value={scheduledAt}
                   onChange={(e) => setScheduledAt(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
                 />
-              )}
-            </div>
+                <p className="text-xs text-gray-500">
+                  {t('checkout.nextDayHint', { defaultValue: 'Lunch orders close the evening before. Pick any future weekday at lunchtime.' })}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="schedule"
+                    checked={!scheduledAt}
+                    onChange={() => setScheduledAt('')}
+                    className="accent-primary-600"
+                  />
+                  <span className="text-sm text-gray-700">{t('checkout.asap')}</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="schedule"
+                    checked={!!scheduledAt}
+                    onChange={() => setScheduledAt(getDefaultScheduleTime())}
+                    className="accent-primary-600"
+                  />
+                  <span className="text-sm text-gray-700">{t('checkout.scheduled')}</span>
+                </label>
+                {scheduledAt && (
+                  <input
+                    type="datetime-local"
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Notes */}
@@ -508,5 +542,20 @@ export default function Checkout() {
 function getDefaultScheduleTime(): string {
   const d = new Date();
   d.setHours(d.getHours() + 1, 0, 0, 0);
-  return d.toISOString().slice(0, 16);
+  return toDatetimeLocal(d);
+}
+
+function getNextLunchSlot(): string {
+  const d = new Date();
+  // If it's already past lunch today, jump to tomorrow.
+  if (d.getHours() >= 11) {
+    d.setDate(d.getDate() + 1);
+  }
+  d.setHours(12, 0, 0, 0);
+  return toDatetimeLocal(d);
+}
+
+function toDatetimeLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }

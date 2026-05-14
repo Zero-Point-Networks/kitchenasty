@@ -9,6 +9,8 @@ const createZoneSchema = z.object({
   minOrder: z.number().min(0).default(0),
   boundaries: z.any().optional(),
   isActive: z.boolean().default(true),
+  cutoffTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Expected HH:MM').nullable().optional(),
+  etaMinutes: z.number().int().min(0).nullable().optional(),
 });
 
 const updateZoneSchema = createZoneSchema.partial();
@@ -108,6 +110,7 @@ export async function checkDeliveryZone(req: Request<{ locationId: string }>, re
 
   const zones = await prisma.deliveryZone.findMany({
     where: { locationId, isActive: true },
+    orderBy: { charge: 'asc' },
   });
 
   for (const zone of zones) {

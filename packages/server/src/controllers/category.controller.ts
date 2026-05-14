@@ -18,8 +18,10 @@ const updateCategorySchema = createCategorySchema.partial().omit({ slug: true })
 
 export async function listCategories(req: Request, res: Response): Promise<void> {
   const locationId = req.query.locationId as string | undefined;
+  const includeInactive = req.query.includeInactive === 'true' && Boolean((req as any).user?.role);
 
   const where: Record<string, unknown> = {};
+  if (!includeInactive) where.isActive = true;
   if (locationId) where.locationId = locationId;
 
   const categories = await prisma.category.findMany({

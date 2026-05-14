@@ -175,6 +175,11 @@ model DeliveryZone {
   // Store boundary as JSON polygon coordinates
   boundaries  Json?
   isActive    Boolean  @default(true)
+  // Next-day order cutoff time in HH:MM (zone-local). When set, orders scheduled
+  // for a future day must be placed before this time on the preceding day.
+  cutoffTime  String?
+  // Average minutes from kitchen handoff to delivery — surfaced to the customer.
+  etaMinutes  Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

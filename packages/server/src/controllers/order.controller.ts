@@ -3,6 +3,7 @@ import { z } from 'zod';
 import prisma from '../lib/db.js';
 import { emitNewOrder, emitOrderStatusUpdate } from '../lib/socket.js';
 import { isPointInPolygon } from '../lib/geo.js';
+import { isAfterCutoff } from '../lib/cutoff.js';
 import { sendEmail, orderConfirmationEmail, orderStatusEmail } from '../lib/email.js';
 import { auditLog } from '../lib/audit.js';
 
@@ -135,6 +136,7 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     if (address?.lat != null && address?.lng != null) {
       const zones = await prisma.deliveryZone.findMany({
         where: { locationId: location.id, isActive: true },
+        orderBy: { charge: 'asc' },
       });
 
       let matchedZone = null;
@@ -154,6 +156,14 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
 
       if (matchedZone) {
         deliveryFee = matchedZone.charge;
+        if (scheduledAt && isAfterCutoff(new Date(), new Date(scheduledAt), matchedZone.cutoffTime)) {
+          res.status(400).json({
+            success: false,
+            error: `Orders for this delivery slot are locked. The cutoff for ${matchedZone.name} is ${matchedZone.cutoffTime} the day before delivery.`,
+            code: 'CUTOFF_PASSED',
+          });
+          return;
+        }
       } else {
         deliveryFee = 4.99; // Fallback if no zones configured
       }

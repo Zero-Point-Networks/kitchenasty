@@ -46,8 +46,12 @@ export async function listMenuItems(req: Request, res: Response): Promise<void> 
   const skip = (page - 1) * limit;
   const categoryId = req.query.categoryId as string | undefined;
   const search = req.query.search as string | undefined;
+  // Public/customer requests never see deactivated items. Staff can pass
+  // `includeInactive=true` to manage the full catalog from the admin.
+  const includeInactive = req.query.includeInactive === 'true' && Boolean((req as any).user?.role);
 
   const where: Record<string, unknown> = {};
+  if (!includeInactive) where.isActive = true;
   if (categoryId) where.categoryId = categoryId;
   if (search) where.name = { contains: search, mode: 'insensitive' };
 

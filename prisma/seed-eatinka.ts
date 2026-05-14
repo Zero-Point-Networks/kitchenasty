@@ -1,0 +1,256 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// Moksha restaurant centre in Schwenningen.
+const CENTRE: [number, number] = [48.060, 8.540];
+
+function box(centre: [number, number], halfLat: number, halfLng: number): [number, number][] {
+  const [lat, lng] = centre;
+  return [
+    [lat - halfLat, lng - halfLng],
+    [lat - halfLat, lng + halfLng],
+    [lat + halfLat, lng + halfLng],
+    [lat + halfLat, lng - halfLng],
+  ];
+}
+
+async function main() {
+  console.log('[eatinka] seeding Eat Inka demo data');
+
+  // Location -----------------------------------------------------------------
+  const location = await prisma.location.upsert({
+    where: { slug: 'moksha-schwenningen' },
+    update: {},
+    create: {
+      slug: 'moksha-schwenningen',
+      name: 'Moksha — Schwenningen',
+      description: 'Authentic Indian kitchen powering Eat Inka corporate lunch deliveries.',
+      address: 'Bürkstraße 4',
+      city: 'Villingen-Schwenningen',
+      state: 'BW',
+      postalCode: '78054',
+      country: 'DE',
+      phone: '+49 7720 0000000',
+      email: 'hello@eatinka.de',
+      lat: CENTRE[0],
+      lng: CENTRE[1],
+      deliveryEnabled: true,
+      pickupEnabled: true,
+      minOrderDelivery: 12,
+      minOrderPickup: 0,
+      deliveryLeadTime: 60,
+      pickupLeadTime: 30,
+    },
+  });
+
+  // Deactivate any other locations, categories, and menu items so the
+  // storefront only surfaces Eat Inka content. Items keep their data (in case
+  // we want to restore KitchenAsty seed later) but stop appearing in the UI.
+  await prisma.location.updateMany({
+    where: { NOT: { id: location.id } },
+    data: { isActive: false },
+  });
+  await prisma.category.updateMany({
+    where: { NOT: { slug: { startsWith: 'eatinka-' } } },
+    data: { isActive: false },
+  });
+  await prisma.menuItem.updateMany({
+    where: { NOT: { slug: { startsWith: 'eatinka-' } } },
+    data: { isActive: false },
+  });
+
+  // Operating hours (Mon–Fri lunch service)
+  const lunchDays = [1, 2, 3, 4, 5];
+  for (const dow of [0, 1, 2, 3, 4, 5, 6]) {
+    await prisma.operatingHour.upsert({
+      where: { locationId_dayOfWeek: { locationId: location.id, dayOfWeek: dow } },
+      update: {},
+      create: {
+        locationId: location.id,
+        dayOfWeek: dow,
+        openTime: '11:30',
+        closeTime: '14:00',
+        isClosed: !lunchDays.includes(dow),
+      },
+    });
+  }
+
+  // Delivery zones -----------------------------------------------------------
+  // Concentric rectangles around Moksha. `charge` ascending means the inner
+  // zone matches first in the order controller.
+  const zones = [
+    {
+      name: '1 Schwenningen Mitte',
+      boundaries: box(CENTRE, 0.009, 0.013),
+      charge: 0,
+      minOrder: 12,
+      cutoffTime: '20:00',
+      etaMinutes: 20,
+    },
+    {
+      name: '2 Villingen & Suburbs',
+      boundaries: box(CENTRE, 0.045, 0.065),
+      charge: 1.5,
+      minOrder: 18,
+      cutoffTime: '19:00',
+      etaMinutes: 30,
+    },
+    {
+      name: '3 Wider Region',
+      boundaries: box(CENTRE, 0.108, 0.155),
+      charge: 3.5,
+      minOrder: 25,
+      cutoffTime: '17:00',
+      etaMinutes: 45,
+    },
+  ];
+
+  for (const z of zones) {
+    const existing = await prisma.deliveryZone.findFirst({
+      where: { locationId: location.id, name: z.name },
+    });
+    if (existing) {
+      await prisma.deliveryZone.update({
+        where: { id: existing.id },
+        data: {
+          boundaries: z.boundaries,
+          charge: z.charge,
+          minOrder: z.minOrder,
+          cutoffTime: z.cutoffTime,
+          etaMinutes: z.etaMinutes,
+          isActive: true,
+        },
+      });
+    } else {
+      await prisma.deliveryZone.create({
+        data: {
+          locationId: location.id,
+          name: z.name,
+          boundaries: z.boundaries,
+          charge: z.charge,
+          minOrder: z.minOrder,
+          cutoffTime: z.cutoffTime,
+          etaMinutes: z.etaMinutes,
+        },
+      });
+    }
+  }
+
+  // Categories ---------------------------------------------------------------
+  const categories = [
+    { slug: 'eatinka-curries', name: 'Curries', sortOrder: 1 },
+    { slug: 'eatinka-rice-breads', name: 'Rice & Breads', sortOrder: 2 },
+    { slug: 'eatinka-sides', name: 'Sides', sortOrder: 3 },
+    { slug: 'eatinka-drinks', name: 'Drinks', sortOrder: 4 },
+  ];
+  const catBySlug: Record<string, string> = {};
+  for (const c of categories) {
+    const cat = await prisma.category.upsert({
+      where: { slug: c.slug },
+      update: { name: c.name, sortOrder: c.sortOrder, locationId: location.id, isActive: true },
+      create: { ...c, locationId: location.id },
+    });
+    catBySlug[c.slug] = cat.id;
+  }
+
+  // Menu items ---------------------------------------------------------------
+  const img = (name: string) => `/uploads/eatinka/${name}`;
+  const items = [
+    { slug: 'eatinka-butter-chicken', name: 'Butter Chicken', price: 11.5, image: img('pexels-pixabay-277253.jpg'), categorySlug: 'eatinka-curries', description: 'Tandoor-grilled chicken in a silky tomato-cashew gravy.' },
+    { slug: 'eatinka-tikka-masala', name: 'Chicken Tikka Masala', price: 11.9, image: img('pexels-enginakyurt-1438672.jpg'), categorySlug: 'eatinka-curries', description: 'Char-grilled chicken pieces simmered in a spiced masala.' },
+    { slug: 'eatinka-rogan-josh', name: 'Lamb Rogan Josh', price: 13.5, image: img('pexels-fotios-photos-1351238.jpg'), categorySlug: 'eatinka-curries', description: 'Slow-cooked lamb with Kashmiri chilies and aromatics.' },
+    { slug: 'eatinka-paneer-masala', name: 'Paneer Tikka Masala', price: 10.9, image: img('pexels-ella-olsson-572949-1640777.jpg'), categorySlug: 'eatinka-curries', description: 'Grilled cottage cheese in a rich masala. Vegetarian.' },
+    { slug: 'eatinka-dal-tadka', name: 'Dal Tadka', price: 8.9, image: img('pexels-mareefe-678414.jpg'), categorySlug: 'eatinka-curries', description: 'Yellow lentils tempered with cumin and garlic. Vegan.' },
+    { slug: 'eatinka-chana-masala', name: 'Chana Masala', price: 8.5, image: img('pexels-janetrangdoan-1092730.jpg'), categorySlug: 'eatinka-curries', description: 'Chickpeas in a spiced tomato-onion gravy. Vegan.' },
+    { slug: 'eatinka-basmati', name: 'Basmati Rice', price: 3.5, image: img('pexels-jang-699953.jpg'), categorySlug: 'eatinka-rice-breads', description: 'Fragrant long-grain rice, steamed to perfection.' },
+    { slug: 'eatinka-garlic-naan', name: 'Garlic Naan', price: 3.5, image: img('pexels-thepaintedsquare-606540.jpg'), categorySlug: 'eatinka-rice-breads', description: 'Tandoor-baked flatbread brushed with garlic butter.' },
+    { slug: 'eatinka-plain-naan', name: 'Plain Naan', price: 2.9, image: img('pexels-valeriya-842571.jpg'), categorySlug: 'eatinka-rice-breads', description: 'Soft, pillowy tandoor flatbread.' },
+    { slug: 'eatinka-samosa', name: 'Samosa (2 pcs)', price: 4.5, image: img('pexels-robinstickel-70497.jpg'), categorySlug: 'eatinka-sides', description: 'Crisp pastry parcels with spiced potato and peas.' },
+    { slug: 'eatinka-mango-lassi', name: 'Mango Lassi', price: 3.9, image: img('pexels-vanmalidate-784631.jpg'), categorySlug: 'eatinka-drinks', description: 'Sweet yogurt drink with ripe mango.' },
+    { slug: 'eatinka-masala-chai', name: 'Masala Chai', price: 2.5, image: img('pexels-elevate-1267320.jpg'), categorySlug: 'eatinka-drinks', description: 'Black tea spiced with cardamom and ginger.' },
+  ];
+
+  let order = 1;
+  for (const it of items) {
+    await prisma.menuItem.upsert({
+      where: { slug: it.slug },
+      update: {
+        name: it.name,
+        price: it.price,
+        image: it.image,
+        description: it.description,
+        categoryId: catBySlug[it.categorySlug],
+        locationId: location.id,
+        sortOrder: order,
+        isActive: true,
+      },
+      create: {
+        slug: it.slug,
+        name: it.name,
+        price: it.price,
+        image: it.image,
+        description: it.description,
+        categoryId: catBySlug[it.categorySlug],
+        locationId: location.id,
+        sortOrder: order,
+      },
+    });
+    order += 1;
+  }
+
+  // Site settings ------------------------------------------------------------
+  await prisma.siteSettings.upsert({
+    where: { id: 'default' },
+    update: {
+      siteName: 'Eat Inka',
+      siteTitle: "Eat Inka — Tomorrow's Lunch, Delivered",
+      storefrontTemplate: 'elegant',
+      colorPrimary: '#c2410c',
+      colorSecondary: '#15803d',
+      logo: '/uploads/eatinka/InkaLogo.jpg',
+      darkMode: 'light',
+      heroSection: {
+        title: 'Tomorrow’s Lunch, Sorted',
+        subtitle: 'Authentic Indian dishes from Moksha, delivered to your desk. Order by 8 PM, lunch lands by noon.',
+        backgroundImage: '/uploads/eatinka/INKA_1.jpg',
+        ctaPrimaryText: 'Order Tomorrow’s Lunch',
+        ctaPrimaryLink: '/menu',
+        ctaSecondaryText: 'See Delivery Areas',
+        ctaSecondaryLink: '/locations',
+      },
+      featuresSection: [
+        { icon: '🕗', title: 'Order by 8 PM', description: 'Lock in tomorrow’s lunch the night before. Per-zone cutoffs visible at a glance.' },
+        { icon: '📍', title: 'Smart Geo-fence', description: 'We deliver across Schwenningen and the wider Black Forest region.' },
+        { icon: '🍛', title: 'Built for Teams', description: 'Slack-friendly menus, group orders, and a daily-rotating chef’s special coming soon.' },
+      ],
+      ctaSection: {
+        title: 'Hungry for tomorrow?',
+        description: 'Pre-order your team’s lunch in under a minute.',
+        buttonText: 'Browse the Menu',
+        buttonLink: '/menu',
+      },
+    },
+    create: {
+      id: 'default',
+      siteName: 'Eat Inka',
+      siteTitle: "Eat Inka — Tomorrow's Lunch, Delivered",
+      storefrontTemplate: 'elegant',
+      colorPrimary: '#c2410c',
+      colorSecondary: '#15803d',
+      logo: '/uploads/eatinka/InkaLogo.jpg',
+      darkMode: 'light',
+    },
+  });
+
+  console.log('[eatinka] done.');
+  console.log(`[eatinka] location: ${location.id} (${location.slug})`);
+  console.log(`[eatinka] menu items: ${items.length}, zones: ${zones.length}`);
+}
+
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(() => prisma.$disconnect());

@@ -9,6 +9,8 @@ interface DeliveryZone {
   minOrder: number;
   boundaries: unknown;
   isActive: boolean;
+  cutoffTime: string | null;
+  etaMinutes: number | null;
 }
 
 export default function DeliveryZoneList() {
@@ -23,6 +25,8 @@ export default function DeliveryZoneList() {
   const [charge, setCharge] = useState('0');
   const [minOrder, setMinOrder] = useState('0');
   const [boundariesJson, setBoundariesJson] = useState('');
+  const [cutoffTime, setCutoffTime] = useState('');
+  const [etaMinutes, setEtaMinutes] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -55,6 +59,8 @@ export default function DeliveryZoneList() {
         charge: parseFloat(charge) || 0,
         minOrder: parseFloat(minOrder) || 0,
         boundaries,
+        cutoffTime: cutoffTime || null,
+        etaMinutes: etaMinutes ? parseInt(etaMinutes, 10) : null,
       });
 
       setZones((prev) => [...prev, res.data]);
@@ -63,6 +69,8 @@ export default function DeliveryZoneList() {
       setCharge('0');
       setMinOrder('0');
       setBoundariesJson('');
+      setCutoffTime('');
+      setEtaMinutes('');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -144,6 +152,30 @@ export default function DeliveryZoneList() {
               />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Next-day cutoff (HH:MM)</label>
+              <input
+                type="time"
+                value={cutoffTime}
+                onChange={(e) => setCutoffTime(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">Orders for the next day are locked at this time. Leave blank for no cutoff.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Estimated delivery (minutes)</label>
+              <input
+                type="number"
+                min="0"
+                value={etaMinutes}
+                onChange={(e) => setEtaMinutes(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"
+                placeholder="e.g., 25"
+              />
+              <p className="text-xs text-gray-500 mt-1">Shown to the customer when this zone matches their address.</p>
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Boundaries (JSON polygon)</label>
             <textarea
@@ -182,6 +214,8 @@ export default function DeliveryZoneList() {
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Name</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Charge</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Min Order</th>
+                <th className="text-right px-4 py-3 font-medium text-gray-600">Cutoff</th>
+                <th className="text-right px-4 py-3 font-medium text-gray-600">ETA</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>
               </tr>
@@ -192,6 +226,8 @@ export default function DeliveryZoneList() {
                   <td className="px-4 py-3 font-medium text-gray-900">{zone.name}</td>
                   <td className="px-4 py-3 text-right">${zone.charge.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right">${zone.minOrder.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right text-gray-600">{zone.cutoffTime || '—'}</td>
+                  <td className="px-4 py-3 text-right text-gray-600">{zone.etaMinutes ? `${zone.etaMinutes} min` : '—'}</td>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => toggleActive(zone)}
