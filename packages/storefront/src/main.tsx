@@ -20,6 +20,7 @@ import OrderStatus from './pages/OrderStatus.js';
 import AuthCallback from './pages/AuthCallback.js';
 import PrivacyPolicy from './pages/PrivacyPolicy.js';
 import Impressum from './pages/Impressum.js';
+import Allergens from './pages/Allergens.js';
 import NotFound from './pages/NotFound.js';
 import './i18n/index.js';
 import './index.css';
@@ -47,6 +48,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/orders/:id" element={<OrderStatus />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/impressum" element={<Impressum />} />
+            <Route path="/allergens" element={<Allergens />} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

@@ -14,6 +14,10 @@ interface Category {
   children: Category[];
 }
 
+interface AllergenLink {
+  allergen: { id: string; name: string };
+}
+
 interface MenuItem {
   id: string;
   name: string;
@@ -25,6 +29,7 @@ interface MenuItem {
   trackStock: boolean;
   stockQty: number;
   category: { id: string; name: string };
+  allergens?: AllergenLink[];
   _count: { options: number; allergens: number; mealtimes: number };
 }
 
@@ -115,16 +120,15 @@ export default function Menu() {
             <div className="col-span-12 lg:col-span-7">
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-saffron" />
-                <span className="eyebrow text-saffron">The Bill of Fare</span>
+                <span className="eyebrow text-saffron">{t('editorial.menuMasthead')}</span>
               </div>
               <h1 className="font-display mt-5 text-5xl lg:text-7xl leading-[0.95] tracking-tight-display text-ink">
-                Today's kitchen, <span className="italic text-saffron">tomorrow's</span> table.
+                {t('editorial.menuTitleLine1')} <span className="italic text-saffron">{t('editorial.menuTitleLine2')}</span> {t('editorial.menuTitleLine3')}
               </h1>
             </div>
             <div className="col-span-12 lg:col-span-4 lg:col-start-9 self-end">
               <p className="font-editorial text-base leading-relaxed text-ink-soft">
-                A small menu, written each morning. Pick by 20:00 tonight and
-                we'll have it at your desk before the post-lunch lull.
+                {t('editorial.menuIntro')}
               </p>
             </div>
           </div>
@@ -134,7 +138,7 @@ export default function Menu() {
           <div className="flex flex-col lg:flex-row gap-4 lg:items-center justify-between mt-5">
             <nav className="flex flex-wrap gap-x-6 gap-y-2 items-baseline">
               <FilterChip active={!selectedCategory} onClick={() => setSelectedCategory(null)}>
-                All
+                {t('editorial.menuFilterAll')}
               </FilterChip>
               {activeCategories.map((cat) => (
                 <FilterChip
@@ -170,13 +174,13 @@ export default function Menu() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
         {itemsLoading && (
           <div className="text-center py-20 font-mono-tabular text-xs uppercase tracking-eyebrow text-ink-mute">
-            Setting the table…
+            {t('editorial.menuLoading')}
           </div>
         )}
 
         {!itemsLoading && activeItems.length === 0 && (
           <div className="text-center py-20">
-            <p className="font-editorial italic text-ink-mute">No dishes match that search.</p>
+            <p className="font-editorial italic text-ink-mute">{t('editorial.menuEmpty')}</p>
           </div>
         )}
 
@@ -207,6 +211,7 @@ export default function Menu() {
                       key={item.id}
                       item={item}
                       index={ii + 1}
+                      t={t}
                       onSelect={() => setSelectedItemId(item.id)}
                     />
                   ))}
@@ -224,18 +229,23 @@ export default function Menu() {
   );
 }
 
+type TFunc = (k: string, opts?: Record<string, unknown>) => string;
+
 /** A single line in the printed menu. */
 function Dish({
   item,
   index,
+  t,
   onSelect,
 }: {
   item: MenuItem;
   index: number;
+  t: TFunc;
   onSelect: () => void;
 }) {
   const hindi = HINDI_NAMES[item.slug];
-  const tags = DISH_TAGS[item.slug];
+  const diet = DISH_DIET[item.slug];
+  const allergens = item.allergens ?? [];
 
   return (
     <li>
@@ -260,6 +270,7 @@ function Dish({
             <h3 className="font-display text-xl lg:text-2xl text-ink leading-tight group-hover:text-saffron transition-colors">
               {item.name}
             </h3>
+            {diet && <DietBadge diet={diet} t={t} />}
             <span className="menu-leader" aria-hidden />
             <span className="font-mono-tabular text-base text-ink whitespace-nowrap">
               €{item.price.toFixed(2)}
@@ -275,21 +286,60 @@ function Dish({
               {item.description}
             </p>
           )}
-          {tags && (
-            <div className="mt-2 flex items-center gap-2 font-mono-tabular text-[10px] uppercase tracking-eyebrow">
-              {tags.map((tag) => (
-                <span
-                  key={tag.label}
-                  className={tag.kind === 'veg' ? 'text-bottle' : 'text-tobacco'}
-                >
-                  {tag.label}
-                </span>
-              ))}
+          {allergens.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="font-mono-tabular text-[9px] uppercase tracking-eyebrow text-ink-mute">
+                {t('editorial.menuAllergensLabel')}
+              </span>
+              {allergens.map((a) => {
+                const key = a.allergen.name.toLowerCase();
+                const localised = t(`editorial.allergensShort.${key}`, { defaultValue: a.allergen.name });
+                const hover = t(`editorial.allergens.${key}`, { defaultValue: a.allergen.name });
+                return (
+                  <span
+                    key={a.allergen.id}
+                    className="font-mono-tabular text-[9px] uppercase tracking-eyebrow bg-tobacco/10 text-tobacco px-1.5 py-0.5"
+                    title={hover}
+                  >
+                    {localised}
+                  </span>
+                );
+              })}
             </div>
           )}
         </div>
       </button>
     </li>
+  );
+}
+
+/** Circular icon badge for vegetarian/vegan with hover tooltip. */
+function DietBadge({ diet, t }: { diet: 'veg' | 'vegan'; t: TFunc }) {
+  const label = t(diet === 'vegan' ? 'editorial.dietVegan' : 'editorial.dietVeg');
+  const colour = diet === 'vegan' ? '#15803d' : '#2d6a4f';
+  // Leaf icon for vegan, ⓥ for vegetarian — both feel quietly editorial.
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      className="inline-flex shrink-0 items-center justify-center w-5 h-5 rounded-full border"
+      style={{ borderColor: colour, color: colour }}
+    >
+      {diet === 'vegan' ? (
+        <svg viewBox="0 0 16 16" className="w-3 h-3" aria-hidden>
+          <path
+            d="M3 13c0-5 3-9 10-9 0 7-4 10-9 10-.4 0-.7-.3-.7-.7l-.3-.3z M6 11c1.5-2 3-3 5-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      ) : (
+        <span className="font-display text-[11px] leading-none">V</span>
+      )}
+    </span>
   );
 }
 
@@ -333,14 +383,14 @@ const HINDI_NAMES: Record<string, string> = {
   'eatinka-masala-chai': 'Masala Chai',
 };
 
-const DISH_TAGS: Record<string, Array<{ label: string; kind: 'veg' | 'note' }>> = {
-  'eatinka-paneer-masala': [{ label: 'Vegetarian', kind: 'veg' }],
-  'eatinka-dal-tadka': [{ label: 'Vegan', kind: 'veg' }],
-  'eatinka-chana-masala': [{ label: 'Vegan', kind: 'veg' }],
-  'eatinka-basmati': [{ label: 'Vegan', kind: 'veg' }],
-  'eatinka-garlic-naan': [{ label: 'Vegetarian', kind: 'veg' }],
-  'eatinka-plain-naan': [{ label: 'Vegetarian', kind: 'veg' }],
-  'eatinka-samosa': [{ label: 'Vegetarian', kind: 'veg' }],
-  'eatinka-mango-lassi': [{ label: 'Vegetarian', kind: 'veg' }],
-  'eatinka-masala-chai': [{ label: 'Vegetarian', kind: 'veg' }],
+const DISH_DIET: Record<string, 'veg' | 'vegan'> = {
+  'eatinka-paneer-masala': 'veg',
+  'eatinka-dal-tadka': 'vegan',
+  'eatinka-chana-masala': 'vegan',
+  'eatinka-basmati': 'vegan',
+  'eatinka-garlic-naan': 'veg',
+  'eatinka-plain-naan': 'veg',
+  'eatinka-samosa': 'vegan',
+  'eatinka-mango-lassi': 'veg',
+  'eatinka-masala-chai': 'veg',
 };

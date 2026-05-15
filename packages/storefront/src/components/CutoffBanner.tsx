@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 interface Zone {
   id: string;
@@ -55,6 +56,7 @@ function dateLabel(d: Date): string {
  * customer knows the urgency in one glance.
  */
 export default function CutoffBanner() {
+  const { t } = useTranslation();
   const [cutoffTime, setCutoffTime] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
 
@@ -98,9 +100,9 @@ export default function CutoffBanner() {
         <div className="rule-strong absolute inset-x-0 top-0" style={{ background: '#7c5e3c' }} />
         <div className="rule-strong absolute inset-x-0 bottom-0" style={{ background: '#7c5e3c' }} />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-center gap-4 text-paper">
-          <span className="eyebrow eyebrow-mute text-paper/70">Window Closed</span>
-          <span className="font-display text-base sm:text-lg">Today's lunch slot is locked in.</span>
-          <span className="eyebrow text-paper/60">Reopens 00:01</span>
+          <span className="eyebrow eyebrow-mute text-paper/70">{t('editorial.bannerWindowClosed')}</span>
+          <span className="font-display text-base sm:text-lg">{t('editorial.bannerLocked')}</span>
+          <span className="eyebrow text-paper/60">{t('editorial.bannerReopens')}</span>
         </div>
       </div>
     );
@@ -121,7 +123,7 @@ export default function CutoffBanner() {
         <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
           {/* Left: kicker + date — looks like a magazine slug line */}
           <div className="hidden sm:flex flex-col leading-tight">
-            <span className="eyebrow">Tonight's Cutoff</span>
+            <span className="eyebrow">{t('editorial.bannerTonightsCutoff')}</span>
             <span className="font-mono-tabular text-[10px] tracking-[0.18em] text-ink-mute mt-0.5">
               {cutoffDateStamp}
             </span>
@@ -146,7 +148,7 @@ export default function CutoffBanner() {
               <CountUnit value={r.m} unit="M" />
               <span className="text-ink-mute">·</span>
               <CountUnit value={r.s} unit="S" />
-              <span className="ml-1 text-[10px] uppercase tracking-eyebrow text-ink-mute">left</span>
+              <span className="ml-1 text-[10px] uppercase tracking-eyebrow text-ink-mute">{t('editorial.bannerLeft')}</span>
             </div>
           </div>
 
@@ -155,7 +157,7 @@ export default function CutoffBanner() {
             to="/menu"
             className="hidden sm:flex items-center gap-2 font-ui text-[11px] uppercase tracking-eyebrow text-ink hover:text-saffron transition-colors group"
           >
-            Reserve tomorrow's lunch
+            {t('editorial.bannerOrderTomorrow')}
             <span className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
           </Link>
         </div>

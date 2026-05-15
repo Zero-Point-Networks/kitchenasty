@@ -168,26 +168,60 @@ async function main() {
     catBySlug[c.slug] = cat.id;
   }
 
+  // Allergens — the EU-mandated 14 allergens that need to appear on menus.
+  // We upsert by unique name so re-running the seed is idempotent.
+  const allergens = [
+    'Gluten',
+    'Dairy',
+    'Eggs',
+    'Nuts',
+    'Peanuts',
+    'Soy',
+    'Mustard',
+    'Sesame',
+    'Celery',
+    'Sulphites',
+  ];
+  const allergenIds: Record<string, string> = {};
+  for (const name of allergens) {
+    const a = await prisma.allergen.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+    allergenIds[name] = a.id;
+  }
+
   // Menu items ---------------------------------------------------------------
   const img = (name: string) => `/uploads/eatinka/${name}`;
-  const items = [
-    { slug: 'eatinka-butter-chicken', name: 'Butter Chicken', price: 11.5, image: img('pexels-pixabay-277253.jpg'), categorySlug: 'eatinka-curries', description: 'Tandoor-grilled chicken in a silky tomato-cashew gravy.' },
-    { slug: 'eatinka-tikka-masala', name: 'Chicken Tikka Masala', price: 11.9, image: img('pexels-enginakyurt-1438672.jpg'), categorySlug: 'eatinka-curries', description: 'Char-grilled chicken pieces simmered in a spiced masala.' },
-    { slug: 'eatinka-rogan-josh', name: 'Lamb Rogan Josh', price: 13.5, image: img('pexels-fotios-photos-1351238.jpg'), categorySlug: 'eatinka-curries', description: 'Slow-cooked lamb with Kashmiri chilies and aromatics.' },
-    { slug: 'eatinka-paneer-masala', name: 'Paneer Tikka Masala', price: 10.9, image: img('pexels-ella-olsson-572949-1640777.jpg'), categorySlug: 'eatinka-curries', description: 'Grilled cottage cheese in a rich masala. Vegetarian.' },
-    { slug: 'eatinka-dal-tadka', name: 'Dal Tadka', price: 8.9, image: img('pexels-mareefe-678414.jpg'), categorySlug: 'eatinka-curries', description: 'Yellow lentils tempered with cumin and garlic. Vegan.' },
-    { slug: 'eatinka-chana-masala', name: 'Chana Masala', price: 8.5, image: img('pexels-janetrangdoan-1092730.jpg'), categorySlug: 'eatinka-curries', description: 'Chickpeas in a spiced tomato-onion gravy. Vegan.' },
-    { slug: 'eatinka-basmati', name: 'Basmati Rice', price: 3.5, image: img('pexels-jang-699953.jpg'), categorySlug: 'eatinka-rice-breads', description: 'Fragrant long-grain rice, steamed to perfection.' },
-    { slug: 'eatinka-garlic-naan', name: 'Garlic Naan', price: 3.5, image: img('pexels-thepaintedsquare-606540.jpg'), categorySlug: 'eatinka-rice-breads', description: 'Tandoor-baked flatbread brushed with garlic butter.' },
-    { slug: 'eatinka-plain-naan', name: 'Plain Naan', price: 2.9, image: img('pexels-valeriya-842571.jpg'), categorySlug: 'eatinka-rice-breads', description: 'Soft, pillowy tandoor flatbread.' },
-    { slug: 'eatinka-samosa', name: 'Samosa (2 pcs)', price: 4.5, image: img('pexels-robinstickel-70497.jpg'), categorySlug: 'eatinka-sides', description: 'Crisp pastry parcels with spiced potato and peas.' },
-    { slug: 'eatinka-mango-lassi', name: 'Mango Lassi', price: 3.9, image: img('pexels-vanmalidate-784631.jpg'), categorySlug: 'eatinka-drinks', description: 'Sweet yogurt drink with ripe mango.' },
-    { slug: 'eatinka-masala-chai', name: 'Masala Chai', price: 2.5, image: img('pexels-elevate-1267320.jpg'), categorySlug: 'eatinka-drinks', description: 'Black tea spiced with cardamom and ginger.' },
+  type Diet = 'veg' | 'vegan' | undefined;
+  const items: Array<{
+    slug: string;
+    name: string;
+    price: number;
+    image: string;
+    categorySlug: string;
+    description: string;
+    diet?: Diet;
+    allergens: string[];
+  }> = [
+    { slug: 'eatinka-butter-chicken', name: 'Butter Chicken', price: 11.5, image: img('pexels-pixabay-277253.jpg'), categorySlug: 'eatinka-curries', description: 'Tandoor-grilled chicken in a silky tomato-cashew gravy.', allergens: ['Dairy', 'Nuts'] },
+    { slug: 'eatinka-tikka-masala', name: 'Chicken Tikka Masala', price: 11.9, image: img('pexels-enginakyurt-1438672.jpg'), categorySlug: 'eatinka-curries', description: 'Char-grilled chicken pieces simmered in a spiced masala.', allergens: ['Dairy'] },
+    { slug: 'eatinka-rogan-josh', name: 'Lamb Rogan Josh', price: 13.5, image: img('pexels-fotios-photos-1351238.jpg'), categorySlug: 'eatinka-curries', description: 'Slow-cooked lamb with Kashmiri chilies and aromatics.', allergens: [] },
+    { slug: 'eatinka-paneer-masala', name: 'Paneer Tikka Masala', price: 10.9, image: img('pexels-ella-olsson-572949-1640777.jpg'), categorySlug: 'eatinka-curries', description: 'Grilled cottage cheese in a rich, spiced masala.', diet: 'veg', allergens: ['Dairy'] },
+    { slug: 'eatinka-dal-tadka', name: 'Dal Tadka', price: 8.9, image: img('pexels-mareefe-678414.jpg'), categorySlug: 'eatinka-curries', description: 'Yellow lentils tempered with cumin and garlic.', diet: 'vegan', allergens: [] },
+    { slug: 'eatinka-chana-masala', name: 'Chana Masala', price: 8.5, image: img('pexels-janetrangdoan-1092730.jpg'), categorySlug: 'eatinka-curries', description: 'Chickpeas in a spiced tomato-onion gravy.', diet: 'vegan', allergens: [] },
+    { slug: 'eatinka-basmati', name: 'Basmati Rice', price: 3.5, image: img('pexels-jang-699953.jpg'), categorySlug: 'eatinka-rice-breads', description: 'Fragrant long-grain rice, steamed to perfection.', diet: 'vegan', allergens: [] },
+    { slug: 'eatinka-garlic-naan', name: 'Garlic Naan', price: 3.5, image: img('pexels-thepaintedsquare-606540.jpg'), categorySlug: 'eatinka-rice-breads', description: 'Tandoor-baked flatbread brushed with garlic butter.', diet: 'veg', allergens: ['Gluten', 'Dairy'] },
+    { slug: 'eatinka-plain-naan', name: 'Plain Naan', price: 2.9, image: img('pexels-valeriya-842571.jpg'), categorySlug: 'eatinka-rice-breads', description: 'Soft, pillowy tandoor flatbread.', diet: 'veg', allergens: ['Gluten', 'Dairy'] },
+    { slug: 'eatinka-samosa', name: 'Samosa (2 pcs)', price: 4.5, image: img('pexels-robinstickel-70497.jpg'), categorySlug: 'eatinka-sides', description: 'Crisp pastry parcels with spiced potato and peas.', diet: 'vegan', allergens: ['Gluten', 'Mustard'] },
+    { slug: 'eatinka-mango-lassi', name: 'Mango Lassi', price: 3.9, image: img('pexels-vanmalidate-784631.jpg'), categorySlug: 'eatinka-drinks', description: 'Sweet yogurt drink with ripe mango.', diet: 'veg', allergens: ['Dairy'] },
+    { slug: 'eatinka-masala-chai', name: 'Masala Chai', price: 2.5, image: img('pexels-elevate-1267320.jpg'), categorySlug: 'eatinka-drinks', description: 'Black tea spiced with cardamom and ginger.', diet: 'veg', allergens: ['Dairy'] },
   ];
 
   let order = 1;
   for (const it of items) {
-    await prisma.menuItem.upsert({
+    const menuItem = await prisma.menuItem.upsert({
       where: { slug: it.slug },
       update: {
         name: it.name,
@@ -210,6 +244,16 @@ async function main() {
         sortOrder: order,
       },
     });
+
+    // Reset and re-write allergen links for idempotent re-seeding.
+    await prisma.menuItemAllergen.deleteMany({ where: { menuItemId: menuItem.id } });
+    for (const aName of it.allergens) {
+      const aId = allergenIds[aName];
+      if (!aId) continue;
+      await prisma.menuItemAllergen.create({
+        data: { menuItemId: menuItem.id, allergenId: aId },
+      });
+    }
     order += 1;
   }
 

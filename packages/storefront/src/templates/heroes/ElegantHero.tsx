@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import HeroGallery, { type HeroPhoto } from '../../components/HeroGallery.js';
+import { useInView } from '../../hooks/useInView.js';
 
 interface HeroProps {
   hero: {
@@ -29,9 +31,9 @@ export default function ElegantHero({ hero, t }: HeroProps) {
       {/* Folio strip — magazine top-of-page */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-2">
         <div className="flex items-center justify-between text-[10px] tracking-eyebrow uppercase font-ui text-ink-mute">
-          <span>Vol. 01 · No. 01</span>
+          <span>{t('editorial.folioVolume')}</span>
           <span className="hidden sm:inline font-mono-tabular tracking-wider">{folio}</span>
-          <span className="hidden sm:inline">Tomorrow's Lunch · Daily Edition</span>
+          <span className="hidden sm:inline">{t('editorial.folioDailyEdition')}</span>
         </div>
         <div className="rule-strong mt-3" />
       </div>
@@ -40,69 +42,66 @@ export default function ElegantHero({ hero, t }: HeroProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 lg:pt-24 pb-16 lg:pb-24 reveal-stack">
         <div className="flex items-center gap-3">
           <span className="block h-px w-12 bg-saffron" />
-          <span className="eyebrow text-saffron">Corporate Lunch · Schwenningen</span>
+          <span className="eyebrow text-saffron">{t('editorial.heroEyebrow')}</span>
           <span className="block h-px flex-1 bg-tobacco/40" />
           <span className="hidden sm:inline-block font-mono-tabular text-[10px] tracking-eyebrow uppercase text-ink-mute">
-            Open by 20:00 tonight
+            {t('editorial.heroOpenBy')}
           </span>
         </div>
 
-        <h1 className="font-display mt-8 sm:mt-10 text-[3.25rem] sm:text-[5.5rem] lg:text-[8.5rem] leading-[0.88] tracking-tight-display text-ink">
-          Tomorrow's lunch,
-          <br />
-          <span className="italic font-light">locked in</span>
-          <span className="font-light"> </span>
-          <span>tonight</span>
-          <span className="text-saffron">.</span>
-        </h1>
+        <div className="mt-8 lg:mt-10 grid grid-cols-12 gap-6 lg:gap-10">
+          {/* LEFT — Headline + drop-cap subtitle + CTA */}
+          <div className="col-span-12 lg:col-span-8">
+            <h1 className="font-display text-[3.25rem] sm:text-[5rem] lg:text-[7.5rem] leading-[0.9] tracking-tight-display text-ink">
+              {t('editorial.heroTitleLine1')}
+              <br />
+              <span className="italic font-light">{t('editorial.heroTitleLine2')}</span>
+              <span className="font-light"> </span>
+              <span>{t('editorial.heroTitleLine3')}</span>
+              <span className="text-saffron heartbeat">.</span>
+            </h1>
 
-        <div className="mt-10 lg:mt-14 grid grid-cols-12 gap-6">
-          <p className="font-editorial col-span-12 lg:col-span-7 text-lg lg:text-xl leading-relaxed text-ink-soft drop-cap">
-            {hero?.subtitle ||
-              'Authentic Indian dishes from Moksha — delivered to your team by noon. We open the kitchen book at sundown; you reserve, we cook, the rest takes care of itself.'}
-          </p>
+            <p className="font-editorial mt-8 lg:mt-10 max-w-xl text-lg lg:text-xl leading-relaxed text-ink-soft drop-cap">
+              {t('editorial.heroSubtitle')}
+            </p>
 
-          {/* Right-hand details card — small, dense, magazine-sidebar style */}
-          <aside className="col-span-12 lg:col-span-4 lg:col-start-9 self-end">
-            <div className="border-t-2 border-ink pt-4">
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <Link
+                to={hero?.ctaPrimaryLink || '/menu'}
+                className="group inline-flex items-center gap-3 bg-ink text-paper px-8 py-4 font-ui text-sm font-medium tracking-wide hover:bg-saffron transition-colors"
+              >
+                {t('editorial.heroCtaPrimary')}
+                <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
+              </Link>
+              <p className="font-editorial italic text-sm text-ink-mute">
+                {t('editorial.heroEstablished')}
+              </p>
+            </div>
+          </div>
+
+          {/* RIGHT — Rotating photo frame stacked above the magazine-sidebar dl */}
+          <aside className="col-span-12 lg:col-span-4 flex flex-col">
+            <HeroGallery photos={HERO_PHOTOS} />
+            <div className="border-t-2 border-ink pt-4 mt-6">
               <dl className="grid grid-cols-2 gap-y-3 font-mono-tabular text-xs uppercase tracking-eyebrow">
-                <dt className="text-ink-mute">Kitchen</dt>
-                <dd className="text-ink text-right">Moksha</dd>
-                <dt className="text-ink-mute">Catchment</dt>
-                <dd className="text-ink text-right">3 Zones · 12 km</dd>
-                <dt className="text-ink-mute">Cutoff</dt>
-                <dd className="text-saffron text-right">20:00 · 19:00 · 17:00</dd>
-                <dt className="text-ink-mute">Delivery</dt>
-                <dd className="text-ink text-right">Mon — Fri · 12:00</dd>
+                <dt className="text-ink-mute">{t('editorial.detailsKitchen')}</dt>
+                <dd className="text-ink text-right">{t('editorial.detailsKitchenValue')}</dd>
+                <dt className="text-ink-mute">{t('editorial.detailsCatchment')}</dt>
+                <dd className="text-ink text-right">{t('editorial.detailsCatchmentValue')}</dd>
+                <dt className="text-ink-mute">{t('editorial.detailsCutoff')}</dt>
+                <dd className="text-saffron text-right whitespace-nowrap">20:00</dd>
+                <dt className="text-ink-mute">{t('editorial.detailsDelivery')}</dt>
+                <dd className="text-ink text-right">{t('editorial.detailsDeliveryValue')}</dd>
               </dl>
             </div>
           </aside>
-        </div>
-
-        <div className="mt-12 flex flex-wrap items-center gap-4">
-          <Link
-            to={hero?.ctaPrimaryLink || '/menu'}
-            className="group inline-flex items-center gap-3 bg-ink text-paper px-8 py-4 font-ui text-sm font-medium tracking-wide hover:bg-saffron transition-colors"
-          >
-            {hero?.ctaPrimaryText || t('home.viewMenu')}
-            <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
-          </Link>
-          <Link
-            to={hero?.ctaSecondaryLink || '/locations'}
-            className="inline-flex items-center gap-2 border-b border-ink/40 text-ink hover:text-saffron hover:border-saffron px-1 pb-1 font-ui text-sm tracking-wide transition-colors"
-          >
-            {hero?.ctaSecondaryText || 'See the catchment'}
-          </Link>
-          <span className="ml-auto hidden sm:inline-block font-editorial italic text-sm text-ink-mute">
-            — &nbsp;Established with Moksha, 2026
-          </span>
         </div>
       </div>
 
       <div className="rule-strong" />
 
       {/* "Today's Kitchen" specimen strip — three dish polaroids */}
-      <SpecimenStrip />
+      <SpecimenStrip t={t} />
 
       <div className="rule-strong" />
     </section>
@@ -145,39 +144,42 @@ const SPECIMENS: Specimen[] = [
   },
 ];
 
-function SpecimenStrip() {
+function SpecimenStrip({ t }: { t: (k: string) => string }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
       <div className="flex items-baseline gap-4 mb-10">
         <span className="font-mono-tabular text-xs tracking-eyebrow uppercase text-ink-mute">
-          Today's Kitchen
+          {t('editorial.todaysKitchen')}
         </span>
         <span className="block flex-1 h-px bg-tobacco/40" />
         <span className="font-editorial italic text-sm text-ink-soft hidden sm:inline">
-          Three of twelve dishes opening tomorrow
+          {t('editorial.todaysKitchenNote')}
         </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
-        {SPECIMENS.map((s) => (
-          <SpecimenCard key={s.num} specimen={s} />
+        {SPECIMENS.map((s, i) => (
+          <SpecimenCard key={s.num} specimen={s} index={i + 1} />
         ))}
       </div>
     </div>
   );
 }
 
-function SpecimenCard({ specimen }: { specimen: Specimen }) {
+function SpecimenCard({ specimen, index }: { specimen: Specimen; index: number }) {
+  const { ref, visible } = useInView<HTMLAnchorElement>();
+  const delayClass = `reveal-on-scroll-${Math.min(index, 3)}`;
   return (
     <Link
+      ref={ref}
       to="/menu"
-      className="group block"
+      className={`group block reveal-on-scroll ${delayClass} ${visible ? 'is-visible' : ''}`}
     >
       <div className="relative aspect-[4/5] overflow-hidden bg-paper-3">
         <img
           src={specimen.image}
           alt={specimen.name}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.05]"
         />
         {/* Diagonal "exam stamp" with the number */}
         <div className="absolute top-3 left-3 bg-paper px-2.5 py-1">
@@ -201,6 +203,13 @@ function SpecimenCard({ specimen }: { specimen: Specimen }) {
     </Link>
   );
 }
+
+const HERO_PHOTOS: HeroPhoto[] = [
+  { src: '/uploads/eatinka/pexels-fotios-photos-1351238.jpg', captionKey: 'editorial.gallery.rogan-josh' },
+  { src: '/uploads/eatinka/pexels-pixabay-277253.jpg', captionKey: 'editorial.gallery.butter-chicken' },
+  { src: '/uploads/eatinka/pexels-ella-olsson-572949-1640777.jpg', captionKey: 'editorial.gallery.paneer' },
+  { src: '/uploads/eatinka/pexels-mareefe-678414.jpg', captionKey: 'editorial.gallery.dal-tadka' },
+];
 
 function formatFolio(d: Date): string {
   const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];

@@ -63,6 +63,7 @@ export async function listMenuItems(req: Request, res: Response): Promise<void> 
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: {
         category: { select: { id: true, name: true } },
+        allergens: { include: { allergen: { select: { id: true, name: true } } } },
         _count: { select: { options: true, allergens: true, mealtimes: true } },
       },
     }),

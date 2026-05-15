@@ -11,9 +11,10 @@ interface CtaProps {
  * with the hero up top, bookending the page.
  */
 export default function ElegantCta({ cta, t }: CtaProps) {
-  const title = cta?.title || t('home.readyToOrder');
-  const description = cta?.description || t('home.readyToOrderDesc');
-  const buttonText = cta?.buttonText || t('home.createAccount');
+  // Always prefer translated editorial copy; seed-stored CTA is the fallback.
+  const title = t('editorial.ctaTitle');
+  const description = t('editorial.ctaDescription');
+  const buttonText = t('editorial.ctaButton');
   const buttonLink = cta?.buttonLink || '/menu';
 
   return (
@@ -32,7 +33,7 @@ export default function ElegantCta({ cta, t }: CtaProps) {
           <div className="col-span-12 lg:col-span-7">
             <div className="flex items-center gap-3">
               <span className="block h-px w-10" style={{ background: 'var(--saffron)' }} />
-              <span className="eyebrow" style={{ color: 'var(--saffron)' }}>The Closing Folio</span>
+              <span className="eyebrow" style={{ color: 'var(--saffron)' }}>{t('editorial.ctaEyebrow')}</span>
             </div>
 
             <h2 className="font-display mt-6 text-4xl sm:text-5xl lg:text-6xl leading-[0.98] tracking-tight-display text-paper">
@@ -52,7 +53,7 @@ export default function ElegantCta({ cta, t }: CtaProps) {
                 <span className="inline-block transition-transform group-hover:translate-x-1">→</span>
               </Link>
               <span className="font-mono-tabular text-[11px] uppercase tracking-eyebrow text-paper/60">
-                Free to try · No card to browse
+                {t('editorial.ctaFreeNote')}
               </span>
             </div>
           </div>
@@ -60,12 +61,12 @@ export default function ElegantCta({ cta, t }: CtaProps) {
           {/* Colophon block — a "About this issue" card */}
           <aside className="col-span-12 lg:col-span-4 lg:col-start-9">
             <div className="border border-paper/20 p-7 backdrop-blur-sm">
-              <span className="eyebrow text-paper/60">Colophon</span>
+              <span className="eyebrow text-paper/60">{t('editorial.colophonTitle')}</span>
               <dl className="mt-4 space-y-3 font-mono-tabular text-xs text-paper/70 uppercase tracking-wider">
-                <Row k="Kitchen" v="Moksha · Schwenningen" />
-                <Row k="Catchment" v="3 Zones · 12 km" />
-                <Row k="Cutoff" v="20:00 · 19:00 · 17:00" />
-                <Row k="Delivery" v="Mon — Fri · Noon" />
+                <Row k={t('editorial.detailsKitchen')} v={`${t('editorial.detailsKitchenValue')} · Schwenningen`} />
+                <Row k={t('editorial.detailsCatchment')} v={t('editorial.detailsCatchmentValue')} />
+                <Row k={t('editorial.detailsCutoff')} v="20:00 · 19:00 · 17:00" />
+                <Row k={t('editorial.detailsDelivery')} v={t('editorial.detailsDeliveryValue')} />
               </dl>
             </div>
           </aside>
