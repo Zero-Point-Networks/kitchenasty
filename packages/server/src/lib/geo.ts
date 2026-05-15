@@ -11,14 +11,13 @@ export function isPointInPolygon(
 ): boolean {
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const [yi, xi] = polygon[i];
-    const [yj, xj] = polygon[j];
+    const [lat_i, lng_i] = polygon[i];
+    const [lat_j, lng_j] = polygon[j];
 
-    const intersect =
-      yi > lng !== yj > lng &&
-      lat < ((xj - xi) * (lng - yi)) / (yj - yi) + xi;
-
-    if (intersect) inside = !inside;
+    const crosses = lat_i > lat !== lat_j > lat;
+    if (!crosses) continue;
+    const xIntersect = ((lng_j - lng_i) * (lat - lat_i)) / (lat_j - lat_i) + lng_i;
+    if (lng < xIntersect) inside = !inside;
   }
   return inside;
 }

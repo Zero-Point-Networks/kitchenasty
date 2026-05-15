@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '@/store/settings.store';
 import { useThemeColors } from '@/hooks/useThemeColors';
+import CutoffBanner from '@/components/CutoffBanner';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function HomeScreen() {
 
   return (
     <ScrollView className="flex-1 bg-gray-50">
+      <CutoffBanner />
       {/* Hero */}
       <View style={{ backgroundColor: primary600 }} className="px-6 pt-12 pb-16">
         <Text className="text-white text-3xl font-bold mb-3">

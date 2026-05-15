@@ -1,28 +1,28 @@
 {
   "expo": {
-    "name": "KitchenAsty",
-    "slug": "kitchenasty",
+    "name": "Eat Inka",
+    "slug": "eat-inka",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "kitchenasty",
+    "scheme": "eatinka",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F97316"
+      "backgroundColor": "#c2410c"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kitchenasty.app"
+      "bundleIdentifier": "de.eatinka.app"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#F97316"
+        "backgroundColor": "#c2410c"
       },
-      "package": "com.kitchenasty.app"
+      "package": "de.eatinka.app"
     },
     "plugins": [
       "expo-router",
@@ -31,7 +31,7 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#F97316"
+          "color": "#c2410c"
         }
       ]
     ],
