@@ -7,10 +7,10 @@ import CutoffBanner from './CutoffBanner.js';
 
 export default function Layout() {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 dark:text-gray-100">
+    <div className="min-h-screen flex flex-col text-ink relative" style={{ background: 'var(--paper)' }}>
       <CutoffBanner />
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 relative">
         <Outlet />
       </main>
       <Footer />

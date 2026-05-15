@@ -5,14 +5,28 @@ const prisma = new PrismaClient();
 // Moksha restaurant centre in Schwenningen.
 const CENTRE: [number, number] = [48.060, 8.540];
 
-function box(centre: [number, number], halfLat: number, halfLng: number): [number, number][] {
+/**
+ * Generate a regular polygon that approximates a true geographic circle of
+ * `radiusMeters` around `centre`. We use 64 vertices — visually
+ * indistinguishable from a circle at typical zoom levels, and still cheap to
+ * run point-in-polygon on.
+ *
+ * Earth curvature is ignored — fine for catchments under ~50 km.
+ */
+function circle(centre: [number, number], radiusMeters: number, segments = 64): [number, number][] {
   const [lat, lng] = centre;
-  return [
-    [lat - halfLat, lng - halfLng],
-    [lat - halfLat, lng + halfLng],
-    [lat + halfLat, lng + halfLng],
-    [lat + halfLat, lng - halfLng],
-  ];
+  const latRad = (lat * Math.PI) / 180;
+  // ~111,111 metres per degree of latitude; longitude shrinks with cos(lat).
+  const dLatPerM = 1 / 111_111;
+  const dLngPerM = 1 / (111_111 * Math.cos(latRad));
+  const out: [number, number][] = [];
+  for (let i = 0; i < segments; i++) {
+    const theta = (i / segments) * Math.PI * 2;
+    const dLat = Math.cos(theta) * radiusMeters * dLatPerM;
+    const dLng = Math.sin(theta) * radiusMeters * dLngPerM;
+    out.push([lat + dLat, lng + dLng]);
+  }
+  return out;
 }
 
 async function main() {
@@ -82,7 +96,7 @@ async function main() {
   const zones = [
     {
       name: '1 Schwenningen Mitte',
-      boundaries: box(CENTRE, 0.009, 0.013),
+      boundaries: circle(CENTRE, 1500), // ~1.5 km radius
       charge: 0,
       minOrder: 12,
       cutoffTime: '20:00',
@@ -90,7 +104,7 @@ async function main() {
     },
     {
       name: '2 Villingen & Suburbs',
-      boundaries: box(CENTRE, 0.045, 0.065),
+      boundaries: circle(CENTRE, 5000), // 5 km radius
       charge: 1.5,
       minOrder: 18,
       cutoffTime: '19:00',
@@ -98,7 +112,7 @@ async function main() {
     },
     {
       name: '3 Wider Region',
-      boundaries: box(CENTRE, 0.108, 0.155),
+      boundaries: circle(CENTRE, 12000), // 12 km radius
       charge: 3.5,
       minOrder: 25,
       cutoffTime: '17:00',
@@ -213,10 +227,10 @@ async function main() {
       heroSection: {
         title: 'Tomorrow’s Lunch, Sorted',
         subtitle: 'Authentic Indian dishes from Moksha, delivered to your desk. Order by 8 PM, lunch lands by noon.',
-        backgroundImage: '/uploads/eatinka/INKA_1.jpg',
+        backgroundImage: '/uploads/eatinka/pexels-fotios-photos-1351238.jpg',
         ctaPrimaryText: 'Order Tomorrow’s Lunch',
         ctaPrimaryLink: '/menu',
-        ctaSecondaryText: 'See Delivery Areas',
+        ctaSecondaryText: 'See the catchment',
         ctaSecondaryLink: '/locations',
       },
       featuresSection: [

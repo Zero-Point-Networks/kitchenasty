@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  /* Brand saffron preserved for backwards compat with the templating system. */
   --color-primary-50: #fff7ed;
   --color-primary-100: #ffedd5;
   --color-primary-200: #fed7aa;
@@ -14,8 +15,204 @@
   --color-primary-800: #9a3412;
   --color-primary-900: #7c2d12;
   --color-primary-950: #431407;
+
+  /* "Bombay Editorial" palette — warm cream paper, tobacco rules,
+     saffron accents, deep green for trust signals. */
+  --paper: #fbf7ee;
+  --paper-2: #f2ebd9;
+  --paper-3: #ebe2cb;
+  --ink: #1a1410;
+  --ink-soft: #4a3b2e;
+  --ink-mute: #7a6a55;
+  --saffron: #c2410c;
+  --saffron-deep: #9a3412;
+  --bottle: #1b4332;
+  --tobacco: #7c5e3c;
+  --rule: rgba(26, 20, 16, 0.18);
+  --rule-strong: rgba(26, 20, 16, 0.45);
 }
 
 html.dark {
   color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+  font-feature-settings: 'ss01', 'ss02', 'ss04', 'ss07';
+}
+
+/* Subtle paper grain on the whole page — adds editorial warmth without
+   loading an asset. SVG noise filter, painted at very low opacity. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='4'/><feColorMatrix values='0 0 0 0 0.10  0 0 0 0 0.08  0 0 0 0 0.06  0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+}
+
+/* Leaflet overrides — drag the map UI into the editorial palette. */
+.leaflet-container {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: var(--paper-2);
+}
+
+.leaflet-tooltip {
+  background: var(--paper);
+  border: 1px solid var(--tobacco);
+  color: var(--ink);
+  box-shadow: 0 1px 0 var(--rule);
+  padding: 4px 8px;
+  border-radius: 0;
+}
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before { display: none; }
+
+.leaflet-control-zoom a {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--tobacco);
+  border-radius: 0;
+  font-family: 'Fraunces', serif;
+}
+.leaflet-control-zoom a:hover {
+  background: var(--paper-2);
+  color: var(--saffron);
+}
+
+.leaflet-control-attribution {
+  background: var(--paper);
+  color: var(--ink-mute);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+}
+.leaflet-control-attribution a { color: var(--tobacco); }
+
+@layer base {
+  h1, h2, h3, h4 {
+    font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+    font-variation-settings: 'opsz' 144, 'SOFT' 30, 'WONK' 1;
+    letter-spacing: -0.015em;
+  }
+  /* UI/system text uses DM Sans so buttons, nav, form labels feel modern
+     against the editorial serif. */
+  button,
+  input,
+  select,
+  textarea,
+  .font-ui {
+    font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+    font-variation-settings: 'opsz' 144, 'SOFT' 50, 'WONK' 1;
+  }
+  .font-editorial {
+    font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+    font-variation-settings: 'opsz' 36, 'SOFT' 30;
+  }
+  .font-ui {
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+  .font-mono-tabular {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Tiny editorial small-caps eyebrow — uppercase with wide tracking. */
+  .eyebrow {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 0.6875rem; /* 11px */
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+  .eyebrow-mute {
+    color: var(--ink-mute);
+  }
+
+  /* Decorative diamond — used as a separator like ◆ but as a positioned span. */
+  .editorial-diamond {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    transform: rotate(45deg);
+    background: currentColor;
+    margin: 0 0.6em;
+    vertical-align: middle;
+    opacity: 0.6;
+  }
+
+  /* Drop cap for opening paragraphs. */
+  .drop-cap::first-letter {
+    font-family: 'Fraunces', Georgia, serif;
+    font-variation-settings: 'opsz' 144, 'WONK' 1;
+    font-weight: 600;
+    font-size: 3.6em;
+    line-height: 0.88;
+    float: left;
+    padding: 0.15em 0.12em 0 0;
+    color: var(--saffron);
+  }
+
+  /* The dotted leader between dish name and price — classic restaurant menu. */
+  .menu-leader {
+    flex: 1;
+    border-bottom: 1px dotted var(--rule-strong);
+    margin: 0 0.75rem;
+    transform: translateY(-4px);
+  }
+
+  /* Subtle pulse for the colon in the cutoff clock — once per second. */
+  .clock-colon {
+    animation: clock-blink 1s steps(2, end) infinite;
+  }
+  @keyframes clock-blink {
+    50% { opacity: 0.25; }
+  }
+
+  /* One choreographed page-load reveal. Children stagger by 80ms. */
+  .reveal-stack > * {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  }
+  .reveal-stack > *:nth-child(1) { animation-delay: 0.05s; }
+  .reveal-stack > *:nth-child(2) { animation-delay: 0.15s; }
+  .reveal-stack > *:nth-child(3) { animation-delay: 0.25s; }
+  .reveal-stack > *:nth-child(4) { animation-delay: 0.35s; }
+  .reveal-stack > *:nth-child(5) { animation-delay: 0.45s; }
+  .reveal-stack > *:nth-child(6) { animation-delay: 0.55s; }
+  @keyframes rise {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Rule line — horizontal, with thin caps. */
+  .rule {
+    height: 1px;
+    background: var(--rule);
+  }
+  .rule-strong {
+    height: 1px;
+    background: var(--rule-strong);
+  }
+  .rule-double {
+    height: 4px;
+    border-top: 1px solid var(--rule-strong);
+    border-bottom: 1px solid var(--rule-strong);
+  }
 }

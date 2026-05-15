@@ -138,12 +138,18 @@ export default function AdminLayout({ children, onLogout }: { children: React.Re
   const isManagerPlus = user && (user.role === 'SUPER_ADMIN' || user.role === 'MANAGER');
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-paper flex">
       {/* Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col" role="navigation" aria-label="Main navigation">
-        <div className="px-6 py-4 border-b border-gray-700">
-          <h1 className="text-xl font-bold text-primary-400">KitchenAsty</h1>
-          <p className="text-xs text-gray-400 mt-1">Admin Panel</p>
+      <aside className="w-64 bg-ink text-paper flex flex-col" role="navigation" aria-label="Main navigation">
+        <div className="px-6 pt-5 pb-4 border-b border-paper/15">
+          <div className="flex items-center gap-2">
+            <span className="block h-px w-6" style={{ background: 'var(--saffron)' }} />
+            <span className="eyebrow" style={{ color: 'var(--saffron)' }}>Kitchen Control</span>
+          </div>
+          <h1 className="font-display text-2xl text-paper mt-2 leading-none">Eat Inka</h1>
+          <p className="font-mono-tabular text-[10px] text-paper/55 tracking-wider uppercase mt-1.5">
+            Newsroom · Schwenningen
+          </p>
         </div>
         <nav className="flex-1 py-4">
           {filteredNav.map((item) => {
@@ -155,23 +161,23 @@ export default function AdminLayout({ children, onLogout }: { children: React.Re
               <div key={item.path}>
                 <Link
                   to={item.children ? item.children[0].path : item.path}
-                  className={`flex items-center px-6 py-3 text-sm transition-colors ${isActive
-                    ? 'bg-gray-800 text-primary-400 border-r-2 border-primary-400'
-                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                  className={`flex items-center px-6 py-2.5 font-ui text-sm transition-colors ${isActive
+                    ? 'bg-paper/5 text-saffron border-r-2 border-saffron'
+                    : 'text-paper/75 hover:bg-paper/5 hover:text-paper'
                     }`}
                 >
-                  <span className="mr-3">{item.icon}</span>
+                  <span className="mr-3 font-mono-tabular text-xs opacity-70">{item.icon}</span>
                   {item.label}
                 </Link>
                 {item.children && isActive && (
-                  <div className="bg-gray-950">
+                  <div className="bg-black/30">
                     {item.children.map((child) => (
                       <Link
                         key={child.path}
                         to={child.path}
-                        className={`block pl-14 pr-6 py-2 text-xs transition-colors ${location.pathname.startsWith(child.path)
-                          ? 'text-primary-400'
-                          : 'text-gray-400 hover:text-white'
+                        className={`block pl-14 pr-6 py-1.5 font-ui text-xs transition-colors ${location.pathname.startsWith(child.path)
+                          ? 'text-saffron'
+                          : 'text-paper/55 hover:text-paper'
                           }`}
                       >
                         {child.label}
@@ -186,9 +192,9 @@ export default function AdminLayout({ children, onLogout }: { children: React.Re
 
         {/* User info at bottom of sidebar */}
         {user && (
-          <div className="px-6 py-4 border-t border-gray-700">
-            <p className="text-sm font-medium text-white truncate">{user.name}</p>
-            <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_COLORS[user.role]}`}>
+          <div className="px-6 py-4 border-t border-paper/15">
+            <p className="font-editorial text-sm text-paper truncate">{user.name}</p>
+            <span className="inline-block mt-1.5 font-mono-tabular text-[10px] tracking-eyebrow uppercase text-saffron">
               {ROLE_LABELS[user.role]}
             </span>
           </div>
@@ -197,7 +203,7 @@ export default function AdminLayout({ children, onLogout }: { children: React.Re
 
       {/* Main content */}
       <div className="flex-1 flex flex-col">
-        <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+        <header className="bg-paper border-b border-tobacco/30 px-6 py-3 flex items-center justify-between">
           <div />
           <div className="flex items-center gap-3">
             {/* Notifications bell */}

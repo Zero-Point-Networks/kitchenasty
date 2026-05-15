@@ -98,11 +98,11 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div>
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h2>
+        <h2 className="font-display text-3xl text-ink leading-tight mb-6">Dashboard</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {['Orders Today', 'Revenue', 'Reservations', 'Active Items'].map((label) => (
-            <div key={label} className="bg-white rounded-lg shadow p-6 animate-pulse">
-              <p className="text-sm text-gray-500">{label}</p>
+            <div key={label} className="border border-tobacco/40 bg-paper-50 p-6 animate-pulse">
+              <p className="eyebrow">{label}</p>
               <div className="h-9 bg-gray-200 rounded mt-2 w-20" role="status" aria-label="Loading" />
             </div>
           ))}
@@ -114,12 +114,12 @@ export default function Dashboard() {
   if (error || !data) {
     return (
       <div>
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">Dashboard</h2>
+        <h2 className="font-display text-3xl text-ink leading-tight mb-6">Dashboard</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {['Orders Today', 'Revenue Today', 'Pending Reservations', 'Active Menu Items'].map((label) => (
-            <div key={label} className="bg-white rounded-lg shadow p-6">
-              <p className="text-sm text-gray-500">{label}</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">--</p>
+            <div key={label} className="border border-tobacco/40 bg-paper-50 p-6">
+              <p className="eyebrow">{label}</p>
+              <p className="font-display text-4xl text-ink mt-1">--</p>
             </div>
           ))}
         </div>
@@ -133,11 +133,14 @@ export default function Dashboard() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Dashboard</h2>
-        <div className="flex bg-gray-100 rounded-lg p-1" role="tablist">
+        <div>
+          <span className="eyebrow text-saffron">Newsroom · Daily</span>
+          <h2 className="font-display text-3xl text-ink leading-tight mt-1">Dashboard</h2>
+        </div>
+        <div className="flex border border-tobacco/40 p-0.5" role="tablist">
           <button
             onClick={() => setTab('overview')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${tab === 'overview' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            className={`px-4 py-1.5 font-ui text-xs uppercase tracking-eyebrow transition-colors ${tab === 'overview' ? 'bg-ink text-paper' : 'text-ink hover:bg-paper-100'
               }`}
             role="tab"
             aria-selected={tab === 'overview'}
@@ -146,7 +149,7 @@ export default function Dashboard() {
           </button>
           <button
             onClick={() => setTab('analytics')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${tab === 'analytics' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            className={`px-4 py-1.5 font-ui text-xs uppercase tracking-eyebrow transition-colors ${tab === 'analytics' ? 'bg-ink text-paper' : 'text-ink hover:bg-paper-100'
               }`}
             role="tab"
             aria-selected={tab === 'analytics'}
@@ -158,25 +161,25 @@ export default function Dashboard() {
 
       {/* Key Metrics — always visible */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500">Orders Today</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{m.ordersToday}</p>
-          <p className="text-xs text-gray-400 mt-1">{m.ordersThisWeek} this week</p>
+        <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+          <p className="eyebrow">Orders Today</p>
+          <p className="font-display text-4xl text-ink mt-1">{m.ordersToday}</p>
+          <p className="font-mono-tabular text-xs text-ink-mute mt-1">{m.ordersThisWeek} this week</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500">Revenue Today</p>
-          <p className="text-3xl font-bold text-primary-600 mt-1">${m.revenueToday.toFixed(2)}</p>
-          <p className="text-xs text-gray-400 mt-1">${m.revenueThisMonth.toFixed(2)} this month</p>
+        <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+          <p className="eyebrow">Revenue Today</p>
+          <p className="font-display text-4xl text-saffron mt-1">${m.revenueToday.toFixed(2)}</p>
+          <p className="font-mono-tabular text-xs text-ink-mute mt-1">${m.revenueThisMonth.toFixed(2)} this month</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500">Pending Reservations</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{m.pendingReservations}</p>
-          <p className="text-xs text-gray-400 mt-1">{m.totalCustomers} total customers</p>
+        <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+          <p className="eyebrow">Pending Reservations</p>
+          <p className="font-display text-4xl text-ink mt-1">{m.pendingReservations}</p>
+          <p className="font-mono-tabular text-xs text-ink-mute mt-1">{m.totalCustomers} total customers</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <p className="text-sm text-gray-500">Active Menu Items</p>
-          <p className="text-3xl font-bold text-gray-900 mt-1">{m.activeItems}</p>
-          <p className="text-xs text-gray-400 mt-1">{m.pendingReviews} reviews pending</p>
+        <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+          <p className="eyebrow">Active Menu Items</p>
+          <p className="font-display text-4xl text-ink mt-1">{m.activeItems}</p>
+          <p className="font-mono-tabular text-xs text-ink-mute mt-1">{m.pendingReviews} reviews pending</p>
         </div>
       </div>
 
@@ -184,29 +187,29 @@ export default function Dashboard() {
         <>
           {/* Summary Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">{m.totalOrders}</p>
-              <p className="text-xs text-gray-500">Total Orders</p>
+            <div className="border border-tobacco/30 bg-paper-100 p-5 text-center">
+              <p className="font-display text-3xl text-ink">{m.totalOrders}</p>
+              <p className="eyebrow mt-1">Total Orders</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">${m.totalRevenue.toFixed(2)}</p>
-              <p className="text-xs text-gray-500">Total Revenue</p>
+            <div className="border border-tobacco/30 bg-paper-100 p-5 text-center">
+              <p className="font-display text-3xl text-ink">${m.totalRevenue.toFixed(2)}</p>
+              <p className="eyebrow mt-1">Total Revenue</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">{m.ordersThisMonth}</p>
-              <p className="text-xs text-gray-500">Orders This Month</p>
+            <div className="border border-tobacco/30 bg-paper-100 p-5 text-center">
+              <p className="font-display text-3xl text-ink">{m.ordersThisMonth}</p>
+              <p className="eyebrow mt-1">Orders This Month</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
-              <p className="text-2xl font-bold text-gray-900">${m.revenueThisWeek.toFixed(2)}</p>
-              <p className="text-xs text-gray-500">Revenue This Week</p>
+            <div className="border border-tobacco/30 bg-paper-100 p-5 text-center">
+              <p className="font-display text-3xl text-ink">${m.revenueThisWeek.toFixed(2)}</p>
+              <p className="eyebrow mt-1">Revenue This Week</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Orders */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
+                <h3 className="font-display text-xl text-ink">Recent Orders</h3>
                 <Link to="/orders" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
                   View All
                 </Link>
@@ -223,7 +226,7 @@ export default function Dashboard() {
                     >
                       <div>
                         <span className="font-mono text-xs font-medium text-gray-900">{order.orderNumber}</span>
-                        <span className="text-xs text-gray-500 ml-2">
+                        <span className="eyebrow mt-1 ml-2">
                           {order.customer?.name || 'Guest'}
                         </span>
                       </div>
@@ -240,9 +243,9 @@ export default function Dashboard() {
             </div>
 
             {/* Top Selling Items */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Top Selling Items</h3>
+                <h3 className="font-display text-xl text-ink">Top Selling Items</h3>
                 <Link to="/menu/items" className="text-primary-600 hover:text-primary-700 text-sm font-medium">
                   View Menu
                 </Link>
@@ -339,8 +342,8 @@ function AnalyticsPanel({
       </div>
 
       {/* Revenue Trend */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Trend</h3>
+      <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+        <h3 className="font-display text-xl text-ink mb-4">Revenue Trend</h3>
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={analytics.dailyStats.map((d) => ({ ...d, label: formatDate(d.date) }))}>
             <defs>
@@ -362,8 +365,8 @@ function AnalyticsPanel({
       </div>
 
       {/* Daily Orders */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Orders</h3>
+      <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+        <h3 className="font-display text-xl text-ink mb-4">Daily Orders</h3>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={analytics.dailyStats.map((d) => ({ ...d, label: formatDate(d.date) }))}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -377,8 +380,8 @@ function AnalyticsPanel({
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Order Type Distribution */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Types</h3>
+        <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+          <h3 className="font-display text-xl text-ink mb-4">Order Types</h3>
           {analytics.orderTypeDistribution.length === 0 ? (
             <p className="text-gray-500 text-sm">No data available.</p>
           ) : (
@@ -405,8 +408,8 @@ function AnalyticsPanel({
         </div>
 
         {/* Order Status Distribution */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Status</h3>
+        <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+          <h3 className="font-display text-xl text-ink mb-4">Order Status</h3>
           {analytics.orderStatusDistribution.length === 0 ? (
             <p className="text-gray-500 text-sm">No data available.</p>
           ) : (
@@ -433,8 +436,8 @@ function AnalyticsPanel({
       </div>
 
       {/* Hourly Distribution */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Orders by Hour of Day</h3>
+      <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+        <h3 className="font-display text-xl text-ink mb-4">Orders by Hour of Day</h3>
         <ResponsiveContainer width="100%" height={250}>
           <BarChart data={fullHourly}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -448,8 +451,8 @@ function AnalyticsPanel({
 
       {/* Category Revenue */}
       {analytics.categoryRevenue.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue by Category</h3>
+        <div className="border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
+          <h3 className="font-display text-xl text-ink mb-4">Revenue by Category</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={analytics.categoryRevenue}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />

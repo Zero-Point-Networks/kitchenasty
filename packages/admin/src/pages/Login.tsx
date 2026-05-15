@@ -4,6 +4,10 @@ interface Props {
   onLogin: (token: string) => void;
 }
 
+/**
+ * Editorial sign-in — the back door to the newsroom. Cream paper background,
+ * black ink form, saffron accents. Demo credentials are hinted at the bottom.
+ */
 export default function Login({ onLogin }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,50 +36,67 @@ export default function Login({ onLogin }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-400">KitchenAsty</h1>
-          <p className="text-gray-400 mt-1 text-sm">Admin Panel</p>
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--paper)' }}>
+      <div className="w-full max-w-md">
+        {/* Masthead */}
+        <div className="text-center mb-10">
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <span className="block h-px w-8 bg-saffron" />
+            <span className="eyebrow text-saffron">Kitchen Control</span>
+            <span className="block h-px w-8 bg-saffron" />
+          </div>
+          <h1 className="font-display text-5xl text-ink leading-none">Eat Inka</h1>
+          <p className="font-mono-tabular text-[10px] tracking-eyebrow uppercase text-ink-mute mt-3">
+            Newsroom · Schwenningen · Staff Only
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8 space-y-5">
-          <h2 className="text-xl font-semibold text-gray-900 text-center">Sign In</h2>
+        <form onSubmit={handleSubmit} className="border border-ink bg-paper-50 p-8 space-y-5">
+          <h2 className="font-display text-2xl text-ink leading-tight">Sign in</h2>
 
           {error && (
-            <div className="bg-red-50 text-red-700 text-sm p-3 rounded-lg">{error}</div>
+            <div className="border border-saffron text-saffron-deep font-ui text-sm p-3">
+              {error}
+            </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block eyebrow mb-1">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+              className="w-full bg-transparent border-0 border-b border-ink/30 focus:border-saffron outline-none px-0 py-2 font-ui text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block eyebrow mb-1">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+              className="w-full bg-transparent border-0 border-b border-ink/30 focus:border-saffron outline-none px-0 py-2 font-ui text-sm"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary-600 text-white py-2.5 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50"
+            className="group w-full bg-ink text-paper py-3 font-ui text-xs uppercase tracking-eyebrow hover:bg-saffron transition-colors disabled:opacity-50"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            <span className="inline-flex items-center gap-2">
+              {loading ? 'Signing in…' : 'Sign In'}
+              {!loading && <span className="transition-transform group-hover:translate-x-0.5">→</span>}
+            </span>
           </button>
+
+          <p className="font-editorial italic text-xs text-ink-mute text-center pt-2 border-t border-tobacco/30">
+            Demo · <span className="font-mono-tabular not-italic text-ink">admin@kitchenasty.com</span> / <span className="font-mono-tabular not-italic text-ink">admin123</span>
+          </p>
         </form>
       </div>
     </div>

@@ -56,121 +56,133 @@ export default function LocationList() {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold text-gray-800">Locations</h2>
-        <Link
-          to="/locations/new"
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
-        >
-          Add Location
-        </Link>
-      </div>
-
-      {loading && <p className="text-gray-500">Loading locations...</p>}
-      {error && <p className="text-red-600">Error: {error}</p>}
-
-      {!loading && !error && locations.length === 0 && (
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-500 mb-4">No locations yet.</p>
+    <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8 lg:py-10">
+      <header className="mb-8">
+        <div className="flex items-center gap-3">
+          <span className="block h-px w-10 bg-saffron" />
+          <span className="eyebrow text-saffron">Operations · Kitchens</span>
+        </div>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+          <h1 className="font-display text-4xl text-ink leading-tight">Locations</h1>
           <Link
             to="/locations/new"
-            className="text-primary-600 hover:text-primary-700 font-medium"
+            className="group inline-flex items-center gap-2 bg-ink text-paper px-5 py-2.5 font-ui text-xs uppercase tracking-eyebrow hover:bg-saffron transition-colors"
           >
-            Create your first location
+            Add Location
+            <span className="transition-transform group-hover:translate-x-0.5">→</span>
+          </Link>
+        </div>
+        <p className="font-editorial italic text-base text-ink-soft mt-2 max-w-xl">
+          One kitchen per location. Configure operating hours, busy mode, and
+          the delivery catchment from here.
+        </p>
+        <div className="rule-strong mt-6" />
+      </header>
+
+      {loading && (
+        <p className="font-mono-tabular text-xs uppercase tracking-eyebrow text-ink-mute text-center py-16">
+          Loading…
+        </p>
+      )}
+      {error && (
+        <div className="border border-saffron text-saffron-deep p-4 font-ui text-sm">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && locations.length === 0 && (
+        <div className="border border-tobacco/40 bg-paper-50 p-12 text-center">
+          <p className="font-editorial italic text-ink-mute mb-4">No locations yet.</p>
+          <Link
+            to="/locations/new"
+            className="font-ui text-xs uppercase tracking-eyebrow text-saffron hover:text-saffron-deep"
+          >
+            Create your first location →
           </Link>
         </div>
       )}
 
       {!loading && locations.length > 0 && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="border border-tobacco/40 bg-paper-50 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-paper-100 border-b border-tobacco/30">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Address
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Services
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Stats
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+                <Th>Name</Th>
+                <Th>Address</Th>
+                <Th>Services</Th>
+                <Th>Status</Th>
+                <Th>Stats</Th>
+                <Th align="right">Actions</Th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {locations.map((loc) => (
-                <tr key={loc.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{loc.name}</div>
-                    <div className="text-xs text-gray-400">{loc.slug}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {loc.address}, {loc.city}{loc.state ? `, ${loc.state}` : ''}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <div className="flex gap-2">
-                      {loc.deliveryEnabled && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                          Delivery
-                        </span>
-                      )}
-                      {loc.pickupEnabled && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                          Pickup
-                        </span>
-                      )}
+                <tr key={loc.id} className="border-b border-tobacco/15 last:border-0 hover:bg-paper-100 transition-colors">
+                  <td className="px-4 py-3.5">
+                    <span className="font-display text-base text-ink leading-tight">{loc.name}</span>
+                    <div className="font-mono-tabular text-[10px] uppercase tracking-wider text-ink-mute mt-0.5">
+                      {loc.slug}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3.5 font-editorial text-sm text-ink-soft">
+                    {loc.address}, {loc.city}{loc.state ? `, ${loc.state}` : ''}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex gap-1.5 font-mono-tabular text-[10px] uppercase tracking-eyebrow">
+                      {loc.deliveryEnabled && <span className="bg-bottle/10 text-bottle px-2 py-0.5">Delivery</span>}
+                      {loc.pickupEnabled && <span className="bg-tobacco/15 text-tobacco px-2 py-0.5">Pickup</span>}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3.5">
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${loc.isActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                        }`}
+                      className={`font-mono-tabular text-[10px] uppercase tracking-eyebrow px-2 py-1 ${
+                        loc.isActive
+                          ? 'bg-bottle/10 text-bottle'
+                          : 'bg-saffron/15 text-saffron-deep'
+                      }`}
                     >
                       {loc.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                    {loc._count.orders} orders &middot; {loc._count.tables} tables &middot;{' '}
-                    {loc._count.deliveryZones} zones
+                  <td className="px-4 py-3.5 font-mono-tabular text-xs text-ink-mute">
+                    {loc._count.orders} ord · {loc._count.tables} tab · {loc._count.deliveryZones} zones
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
-                    <button
-                      onClick={() => toggleBusy(loc)}
-                      disabled={togglingBusy === loc.id}
-                      className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${loc.isBusy
-                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        } disabled:opacity-50`}
-                      aria-label={`${loc.isBusy ? 'Turn off' : 'Turn on'} busy mode for ${loc.name}`}
-                    >
-                      {loc.isBusy ? 'Busy ON' : 'Busy OFF'}
-                    </button>
-                    <Link
-                      to={`/locations/${loc.id}/tables`}
-                      className="text-gray-600 hover:text-gray-900 font-medium"
-                      aria-label={`View tables for ${loc.name}`}
-                    >
-                      Tables
-                    </Link>
-                    <Link
-                      to={`/locations/${loc.id}`}
-                      className="text-primary-600 hover:text-primary-900 font-medium"
-                      aria-label={`Edit ${loc.name}`}
-                    >
-                      Edit
-                    </Link>
+                  <td className="px-4 py-3.5 text-right">
+                    <div className="inline-flex items-center gap-3 font-ui text-xs uppercase tracking-eyebrow">
+                      <button
+                        onClick={() => toggleBusy(loc)}
+                        disabled={togglingBusy === loc.id}
+                        className={`px-2 py-1 transition-colors disabled:opacity-50 ${
+                          loc.isBusy
+                            ? 'bg-saffron text-paper'
+                            : 'bg-paper-200 text-ink hover:bg-ink hover:text-paper'
+                        }`}
+                        aria-label={`${loc.isBusy ? 'Turn off' : 'Turn on'} busy mode for ${loc.name}`}
+                      >
+                        {loc.isBusy ? 'Busy On' : 'Busy Off'}
+                      </button>
+                      <Link
+                        to={`/locations/${loc.id}/delivery-zones`}
+                        className="text-saffron hover:text-saffron-deep"
+                        aria-label={`Delivery catchment for ${loc.name}`}
+                      >
+                        Catchment →
+                      </Link>
+                      <Link
+                        to={`/locations/${loc.id}/tables`}
+                        className="text-ink hover:text-saffron"
+                        aria-label={`View tables for ${loc.name}`}
+                      >
+                        Tables
+                      </Link>
+                      <Link
+                        to={`/locations/${loc.id}`}
+                        className="text-ink hover:text-saffron"
+                        aria-label={`Edit ${loc.name}`}
+                      >
+                        Edit
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -179,5 +191,13 @@ export default function LocationList() {
         </div>
       )}
     </div>
+  );
+}
+
+function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
+  return (
+    <th className={`px-4 py-3 font-mono-tabular text-[10px] uppercase tracking-eyebrow text-ink-mute text-${align}`}>
+      {children}
+    </th>
   );
 }

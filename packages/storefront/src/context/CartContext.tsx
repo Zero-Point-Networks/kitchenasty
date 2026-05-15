@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+
+const STORAGE_KEY = 'eatinka.cart.v1';
 
 export interface CartItemOption {
   optionId: string;
@@ -35,8 +37,26 @@ const CartContext = createContext<CartContextType | null>(null);
 let nextId = 1;
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as CartItem[]) : [];
+    } catch {
+      return [];
+    }
+  });
   const [isOpen, setIsOpen] = useState(false);
+
+  // Persist cart across reloads — important for the next-day flow where
+  // a customer might browse, leave, and come back later that evening.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      // localStorage may be unavailable in private mode — non-fatal
+    }
+  }, [items]);
 
   const addItem = useCallback((item: Omit<CartItem, 'id'>) => {
     setItems((prev) => [...prev, { ...item, id: String(nextId++) }]);

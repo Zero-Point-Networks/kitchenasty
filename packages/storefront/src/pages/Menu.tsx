@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useApi } from '../hooks/useApi.js';
@@ -29,260 +29,318 @@ interface MenuItem {
 }
 
 interface MenuResponse {
-  items: MenuItem[];
+  data: MenuItem[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+/**
+ * Eat Inka menu — read as a printed menu/magazine spread. Each category is a
+ * department; each dish is a horizontal "line" with a dotted leader and a
+ * small square thumbnail. The grid renders 2 columns on wide viewports so
+ * the page never feels like an ecommerce wall of identical cards.
+ */
 export default function Menu() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(
-    searchParams.get('category')
+    searchParams.get('category'),
   );
   const [search, setSearch] = useState(searchParams.get('search') || '');
   const [debouncedSearch, setDebouncedSearch] = useState(search);
-  const [page, setPage] = useState(1);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false);
 
-  const { data: categories, isLoading: categoriesLoading } = useApi<Category[]>('/api/menu/categories');
+  const { data: categories } = useApi<Category[]>('/api/menu/categories');
 
-  // Build items URL with filters
-  const itemsUrl = buildItemsUrl(selectedCategory, debouncedSearch, page);
+  // Fetch ALL items in one shot — the editorial layout reads better when
+  // every dish in a category is visible together, so we skip pagination.
+  const itemsUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (selectedCategory) params.set('categoryId', selectedCategory);
+    if (debouncedSearch) params.set('search', debouncedSearch);
+    params.set('limit', '50');
+    return `/api/menu/items?${params}`;
+  }, [selectedCategory, debouncedSearch]);
+
   const [items, setItems] = useState<MenuItem[]>([]);
-  const [pagination, setPagination] = useState<MenuResponse['pagination'] | null>(null);
   const [itemsLoading, setItemsLoading] = useState(true);
-  const [itemsError, setItemsError] = useState<string | null>(null);
 
-  // Debounce search
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-      setPage(1);
-    }, 300);
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch items
   useEffect(() => {
     setItemsLoading(true);
-    setItemsError(null);
     fetch(itemsUrl)
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to load menu');
-        return res.json();
-      })
-      .then((json) => {
-        setItems(json.data);
-        setPagination(json.pagination);
-      })
-      .catch((err) => setItemsError(err.message))
+      .then((res) => res.json())
+      .then((json: MenuResponse) => setItems(json.data))
       .finally(() => setItemsLoading(false));
   }, [itemsUrl]);
 
-  // Sync URL params
   useEffect(() => {
     const params: Record<string, string> = {};
     if (selectedCategory) params.category = selectedCategory;
     if (debouncedSearch) params.search = debouncedSearch;
-    if (page > 1) params.page = String(page);
     setSearchParams(params, { replace: true });
-  }, [selectedCategory, debouncedSearch, page, setSearchParams]);
+  }, [selectedCategory, debouncedSearch, setSearchParams]);
 
-  const activeCategories = categories?.filter((c) => c.isActive && !c.parentId) || [];
-  const activeItems = items.filter((i) => i.isActive && (!i.trackStock || i.stockQty > 0));
+  const activeCategories = useMemo(
+    () => (categories || []).filter((c) => c.isActive && !c.parentId),
+    [categories],
+  );
+  const activeItems = useMemo(
+    () => items.filter((i) => i.isActive && (!i.trackStock || i.stockQty > 0)),
+    [items],
+  );
 
-  function handleCategoryClick(catId: string | null) {
-    setSelectedCategory(catId);
-    setPage(1);
-    setMobileCategoriesOpen(false);
-  }
+  // Group items by category so we can render each as a labeled department
+  const itemsByCat = useMemo(() => {
+    const map = new Map<string, MenuItem[]>();
+    for (const item of activeItems) {
+      const list = map.get(item.category.id) || [];
+      list.push(item);
+      map.set(item.category.id, list);
+    }
+    return map;
+  }, [activeItems]);
+
+  const numerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">{t('menu.title')}</h1>
-        <p className="mt-2 text-gray-600">{t('home.heroDescription').split('.')[0]}.</p>
-      </div>
-
-      {/* Search bar */}
-      <div className="mb-6">
-        <div className="relative max-w-md">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
-          <input
-            type="text"
-            placeholder={t('menu.searchPlaceholder')}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
-          />
-        </div>
-      </div>
-
-      {/* Mobile category toggle */}
-      <button
-        className="md:hidden flex items-center gap-2 mb-4 text-sm font-medium text-primary-600 hover:text-primary-700"
-        onClick={() => setMobileCategoriesOpen(!mobileCategoriesOpen)}
-      >
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-        </svg>
-        {mobileCategoriesOpen ? t('menu.categories') : t('menu.categories')}
-      </button>
-
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* Category sidebar */}
-        <aside className={`md:w-56 shrink-0 ${mobileCategoriesOpen ? '' : 'hidden md:block'}`}>
-          <nav className="space-y-1">
-            <button
-              onClick={() => handleCategoryClick(null)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                !selectedCategory
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {t('menu.allCategories')}
-            </button>
-            {categoriesLoading && (
-              <div className="px-3 py-2 text-sm text-gray-400">{t('common.loading')}</div>
-            )}
-            {activeCategories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryClick(cat.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedCategory === cat.id
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                {cat.name}
-                <span className="text-gray-400 ml-1 text-xs">({cat._count.menuItems})</span>
-              </button>
-            ))}
-          </nav>
-        </aside>
-
-        {/* Menu items grid */}
-        <div className="flex-1">
-          {itemsLoading && (
-            <div className="flex justify-center py-12">
-              <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
-            </div>
-          )}
-
-          {itemsError && (
-            <div className="bg-red-50 text-red-700 p-4 rounded-lg">
-              {t('common.error')}
-            </div>
-          )}
-
-          {!itemsLoading && !itemsError && activeItems.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-gray-500">{t('menu.noItems')}</p>
-            </div>
-          )}
-
-          {!itemsLoading && activeItems.length > 0 && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {activeItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedItemId(item.id)}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow text-left"
-                  >
-                    {item.image ? (
-                      <img src={item.image} alt={item.name} className="h-40 w-full object-cover" />
-                    ) : (
-                      <div className="h-40 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                        <svg className="w-12 h-12 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                        <span className="text-primary-600 font-bold whitespace-nowrap">
-                          ${item.price.toFixed(2)}
-                        </span>
-                      </div>
-                      {item.description && (
-                        <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
-                      )}
-                      <div className="flex items-center gap-2 mt-3">
-                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                          {item.category.name}
-                        </span>
-                        {item._count.options > 0 && (
-                          <span className="text-xs text-primary-500 bg-primary-50 px-2 py-0.5 rounded-full">
-                            {t('menu.options')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))}
+    <div className="relative">
+      {/* Masthead — the menu has its own banner-line */}
+      <header className="relative" style={{ background: 'var(--paper-2)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-7">
+              <div className="flex items-center gap-3">
+                <span className="block h-px w-10 bg-saffron" />
+                <span className="eyebrow text-saffron">The Bill of Fare</span>
               </div>
+              <h1 className="font-display mt-5 text-5xl lg:text-7xl leading-[0.95] tracking-tight-display text-ink">
+                Today's kitchen, <span className="italic text-saffron">tomorrow's</span> table.
+              </h1>
+            </div>
+            <div className="col-span-12 lg:col-span-4 lg:col-start-9 self-end">
+              <p className="font-editorial text-base leading-relaxed text-ink-soft">
+                A small menu, written each morning. Pick by 20:00 tonight and
+                we'll have it at your desk before the post-lunch lull.
+              </p>
+            </div>
+          </div>
 
-              {/* Pagination */}
-              {pagination && pagination.totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-8">
-                  <button
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => p - 1)}
-                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-                  >
-                    {t('locations.previous')}
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {pagination.page} / {pagination.totalPages}
+          {/* Filter row — categories as horizontal "department" chips, search as a thin underline */}
+          <div className="rule mt-10" />
+          <div className="flex flex-col lg:flex-row gap-4 lg:items-center justify-between mt-5">
+            <nav className="flex flex-wrap gap-x-6 gap-y-2 items-baseline">
+              <FilterChip active={!selectedCategory} onClick={() => setSelectedCategory(null)}>
+                All
+              </FilterChip>
+              {activeCategories.map((cat) => (
+                <FilterChip
+                  key={cat.id}
+                  active={selectedCategory === cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                >
+                  {cat.name}
+                  <span className="ml-1 text-[10px] font-mono-tabular text-ink-mute">
+                    {cat._count.menuItems.toString().padStart(2, '0')}
                   </span>
-                  <button
-                    disabled={page >= pagination.totalPages}
-                    onClick={() => setPage((p) => p + 1)}
-                    className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg disabled:opacity-40 hover:bg-gray-50"
-                  >
-                    {t('locations.next')}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
+                </FilterChip>
+              ))}
+            </nav>
+            <div className="relative max-w-xs w-full lg:w-64">
+              <input
+                type="text"
+                placeholder={t('menu.searchPlaceholder')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-transparent border-0 border-b border-ink/40 focus:border-saffron outline-none px-0 py-2 font-ui text-sm placeholder:text-ink-mute"
+              />
+              <span className="absolute right-0 bottom-2 font-mono-tabular text-[10px] text-ink-mute uppercase tracking-eyebrow">
+                find ↵
+              </span>
+            </div>
+          </div>
+          <div className="rule mt-3" />
         </div>
+      </header>
+
+      {/* The bill itself */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 lg:py-20">
+        {itemsLoading && (
+          <div className="text-center py-20 font-mono-tabular text-xs uppercase tracking-eyebrow text-ink-mute">
+            Setting the table…
+          </div>
+        )}
+
+        {!itemsLoading && activeItems.length === 0 && (
+          <div className="text-center py-20">
+            <p className="font-editorial italic text-ink-mute">No dishes match that search.</p>
+          </div>
+        )}
+
+        {!itemsLoading && activeCategories
+          .filter((cat) => itemsByCat.has(cat.id))
+          .map((cat, ci) => {
+            const dishes = itemsByCat.get(cat.id) || [];
+            return (
+              <section key={cat.id} className={ci > 0 ? 'mt-16 lg:mt-20' : ''}>
+                <header className="mb-8 lg:mb-10">
+                  <div className="flex items-baseline gap-4">
+                    <span className="font-mono-tabular text-sm tracking-eyebrow text-saffron">
+                      {numerals[ci]}
+                    </span>
+                    <h2 className="font-display text-3xl lg:text-4xl text-ink leading-none">
+                      {cat.name}
+                    </h2>
+                    <span className="block flex-1 h-px bg-tobacco/40" />
+                    <span className="font-mono-tabular text-xs text-ink-mute">
+                      {dishes.length.toString().padStart(2, '0')} dishes
+                    </span>
+                  </div>
+                </header>
+
+                <ul className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 lg:gap-x-16 gap-y-7">
+                  {dishes.map((item, ii) => (
+                    <Dish
+                      key={item.id}
+                      item={item}
+                      index={ii + 1}
+                      onSelect={() => setSelectedItemId(item.id)}
+                    />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
       </div>
 
       {/* Item detail modal */}
       {selectedItemId && (
-        <MenuItemModal
-          itemId={selectedItemId}
-          onClose={() => setSelectedItemId(null)}
-        />
+        <MenuItemModal itemId={selectedItemId} onClose={() => setSelectedItemId(null)} />
       )}
     </div>
   );
 }
 
-function buildItemsUrl(categoryId: string | null, search: string, page: number): string {
-  const params = new URLSearchParams();
-  if (categoryId) params.set('categoryId', categoryId);
-  if (search) params.set('search', search);
-  if (page > 1) params.set('page', String(page));
-  params.set('limit', '12');
-  return `/api/menu/items?${params}`;
+/** A single line in the printed menu. */
+function Dish({
+  item,
+  index,
+  onSelect,
+}: {
+  item: MenuItem;
+  index: number;
+  onSelect: () => void;
+}) {
+  const hindi = HINDI_NAMES[item.slug];
+  const tags = DISH_TAGS[item.slug];
+
+  return (
+    <li>
+      <button
+        onClick={onSelect}
+        className="group w-full text-left flex gap-5 items-start hover:bg-paper-100/60 -mx-2 px-2 py-1 transition-colors"
+      >
+        {item.image && (
+          <div className="relative shrink-0 w-20 h-20 lg:w-24 lg:h-24 overflow-hidden grayscale group-hover:grayscale-0 transition-all duration-300">
+            <img
+              src={item.image}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2">
+            <span className="font-mono-tabular text-[10px] text-ink-mute tracking-wider tabular-nums">
+              {String(index).padStart(2, '0')}
+            </span>
+            <h3 className="font-display text-xl lg:text-2xl text-ink leading-tight group-hover:text-saffron transition-colors">
+              {item.name}
+            </h3>
+            <span className="menu-leader" aria-hidden />
+            <span className="font-mono-tabular text-base text-ink whitespace-nowrap">
+              €{item.price.toFixed(2)}
+            </span>
+          </div>
+          {hindi && (
+            <div className="eyebrow eyebrow-mute mt-1.5">
+              {hindi}
+            </div>
+          )}
+          {item.description && (
+            <p className="font-editorial italic text-sm text-ink-soft mt-2 leading-snug line-clamp-2">
+              {item.description}
+            </p>
+          )}
+          {tags && (
+            <div className="mt-2 flex items-center gap-2 font-mono-tabular text-[10px] uppercase tracking-eyebrow">
+              {tags.map((tag) => (
+                <span
+                  key={tag.label}
+                  className={tag.kind === 'veg' ? 'text-bottle' : 'text-tobacco'}
+                >
+                  {tag.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </button>
+    </li>
+  );
 }
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`group font-ui text-sm transition-colors ${
+        active ? 'text-saffron' : 'text-ink hover:text-saffron'
+      }`}
+    >
+      <span className={`pb-1 inline-block ${active ? 'border-b-2 border-saffron' : 'border-b-2 border-transparent'}`}>
+        {children}
+      </span>
+    </button>
+  );
+}
+
+// Static editorial enrichments — pure presentation; not stored in the DB.
+// We add the Hindi-transliterated dish name as small caps, plus dietary tags.
+const HINDI_NAMES: Record<string, string> = {
+  'eatinka-butter-chicken': 'Murgh Makhani',
+  'eatinka-tikka-masala': 'Murgh Tikka Masala',
+  'eatinka-rogan-josh': 'Gosht Rogan Josh',
+  'eatinka-paneer-masala': 'Paneer Tikka Masala',
+  'eatinka-dal-tadka': 'Dal Tadka',
+  'eatinka-chana-masala': 'Chana Masala',
+  'eatinka-basmati': 'Basmati Chawal',
+  'eatinka-garlic-naan': 'Lehsuni Naan',
+  'eatinka-plain-naan': 'Naan',
+  'eatinka-samosa': 'Samosa',
+  'eatinka-mango-lassi': 'Aam Lassi',
+  'eatinka-masala-chai': 'Masala Chai',
+};
+
+const DISH_TAGS: Record<string, Array<{ label: string; kind: 'veg' | 'note' }>> = {
+  'eatinka-paneer-masala': [{ label: 'Vegetarian', kind: 'veg' }],
+  'eatinka-dal-tadka': [{ label: 'Vegan', kind: 'veg' }],
+  'eatinka-chana-masala': [{ label: 'Vegan', kind: 'veg' }],
+  'eatinka-basmati': [{ label: 'Vegan', kind: 'veg' }],
+  'eatinka-garlic-naan': [{ label: 'Vegetarian', kind: 'veg' }],
+  'eatinka-plain-naan': [{ label: 'Vegetarian', kind: 'veg' }],
+  'eatinka-samosa': [{ label: 'Vegetarian', kind: 'veg' }],
+  'eatinka-mango-lassi': [{ label: 'Vegetarian', kind: 'veg' }],
+  'eatinka-masala-chai': [{ label: 'Vegetarian', kind: 'veg' }],
+};

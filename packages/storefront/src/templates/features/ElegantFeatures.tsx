@@ -3,53 +3,78 @@ interface FeaturesProps {
   t: (key: string) => string;
 }
 
-const defaultIcons: Record<string, React.ReactNode> = {
-  clock: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-  clipboard: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>,
-  calendar: <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-};
-
 function getDefaultFeatures(t: (key: string) => string) {
   return [
-    { icon: 'clock', title: t('home.fastDelivery'), description: t('home.fastDeliveryDesc') },
-    { icon: 'clipboard', title: t('home.easyOrdering'), description: t('home.easyOrderingDesc') },
-    { icon: 'calendar', title: t('home.tableReservations'), description: t('home.tableReservationsDesc') },
+    { icon: '🕗', title: 'Order by 8 PM', description: "Lock in tomorrow's lunch the night before. Per-zone cutoffs visible at a glance." },
+    { icon: '📍', title: 'Smart Geo-fence', description: 'We deliver across Schwenningen and the wider Black Forest region.' },
+    { icon: '🍛', title: 'Built for Teams', description: "Group orders, daily-rotating chef's pick, monthly invoicing on the roadmap." },
   ];
 }
 
+/**
+ * Editorial three-act feature spread. Each act gets a roman numeral, a
+ * serif kicker, and a thin tobacco rule beneath. No icon chrome — typography
+ * carries the story.
+ */
 export default function ElegantFeatures({ features, t }: FeaturesProps) {
   const items = features?.length ? features : getDefaultFeatures(t);
+  const numerals = ['I', 'II', 'III', 'IV', 'V', 'VI'];
 
   return (
-    <section className="py-20 px-4 bg-white dark:bg-gray-950">
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-14">
-          <h2 className="text-sm font-medium uppercase tracking-[0.2em] text-primary-600 mb-3">
-            {t('home.whyChooseUs')}
-          </h2>
-          <div className="w-12 h-px bg-gray-300 dark:bg-gray-700 mx-auto" />
+    <section className="relative py-20 lg:py-28" style={{ background: 'var(--paper)' }}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Section heading — magazine TOC vibe */}
+        <div className="grid grid-cols-12 gap-6 mb-14">
+          <div className="col-span-12 lg:col-span-5">
+            <span className="eyebrow">In this issue</span>
+            <h2 className="font-display mt-3 text-4xl sm:text-5xl text-ink leading-[0.95] tracking-tight-display">
+              Three things we do
+              <br />
+              <span className="italic font-light text-saffron">very seriously.</span>
+            </h2>
+          </div>
+          <div className="col-span-12 lg:col-span-6 lg:col-start-7 self-end">
+            <p className="font-editorial text-lg text-ink-soft leading-relaxed max-w-md">
+              Eat Inka is a small operation built on three obsessions: the
+              cutoff that makes everything possible, the catchment that keeps
+              it honest, and the meals that make it worth the wait.
+            </p>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="rule-strong" />
+
+        <ul className="grid grid-cols-1 md:grid-cols-3 gap-0">
           {items.map((feature, i) => (
-            <div
+            <li
               key={i}
-              className="text-center p-8 border border-gray-100 dark:border-gray-800 rounded-sm hover:border-primary-200 dark:hover:border-primary-800 transition-colors duration-300"
+              className={`group relative py-10 md:py-14 px-2 md:px-8 ${
+                i > 0 ? 'md:border-l md:border-tobacco/40' : ''
+              } ${i < items.length - 1 ? 'border-b md:border-b-0 border-tobacco/40' : ''}`}
             >
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full border border-gray-200 dark:border-gray-700 text-primary-600 mb-6">
-                {defaultIcons[feature.icon] ?? (
-                  <span className="text-lg font-light">{feature.icon}</span>
-                )}
+              <div className="flex items-baseline gap-3">
+                <span className="font-mono-tabular text-xs tracking-eyebrow text-saffron">
+                  {numerals[i]}
+                </span>
+                <span className="block h-px flex-1 bg-tobacco/40" />
               </div>
-              <h3 className="text-lg font-light tracking-wide text-gray-900 dark:text-white mb-3 uppercase">
+
+              {/* Icon as a quiet glyph, not the main event */}
+              {feature.icon && (
+                <div className="mt-6 text-2xl text-ink-soft">{feature.icon}</div>
+              )}
+
+              <h3 className="font-display mt-4 text-2xl text-ink leading-tight">
                 {feature.title}
               </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+              <p className="font-editorial mt-3 text-base text-ink-soft leading-relaxed max-w-xs">
                 {feature.description}
               </p>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
+
+        <div className="rule-strong" />
       </div>
     </section>
   );

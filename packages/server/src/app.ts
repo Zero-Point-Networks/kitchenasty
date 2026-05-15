@@ -62,11 +62,13 @@ export function createApp() {
     });
   });
 
-  // Rate limiting
+  // Rate limiting — relaxed in development so background polling (cutoff
+  // banner, settings, zones) never hits a 429 during demos.
   if (process.env.NODE_ENV !== 'test') {
+    const isProd = process.env.NODE_ENV === 'production';
     const limiter = rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, // limit each IP to 100 requests per windowMs
+      windowMs: 15 * 60 * 1000,
+      max: isProd ? 300 : 5000,
       standardHeaders: true,
       legacyHeaders: false,
       message: { success: false, error: 'Too many requests, please try again later.' },

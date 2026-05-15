@@ -1,5 +1,8 @@
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, FormEvent, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
+import { MapContainer, TileLayer, Polygon, CircleMarker, Tooltip, Marker, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { api } from '../lib/api.js';
 
 interface DeliveryZone {
@@ -7,15 +10,29 @@ interface DeliveryZone {
   name: string;
   charge: number;
   minOrder: number;
-  boundaries: unknown;
+  boundaries: [number, number][] | null;
   isActive: boolean;
   cutoffTime: string | null;
   etaMinutes: number | null;
 }
 
+interface LocationInfo {
+  lat: number | null;
+  lng: number | null;
+  name?: string;
+  city?: string;
+}
+
+/**
+ * Delivery Zone editor — editorial-styled admin surface with a polygon map
+ * preview, a slide-down form for new zones, and a tabular list of existing
+ * zones. The map renders the polygons centred on the location's pin and
+ * annotates each ring with its cutoff and ETA.
+ */
 export default function DeliveryZoneList() {
   const { locationId } = useParams<{ locationId: string }>();
   const [zones, setZones] = useState<DeliveryZone[]>([]);
+  const [location, setLocation] = useState<LocationInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -31,8 +48,14 @@ export default function DeliveryZoneList() {
 
   useEffect(() => {
     if (!locationId) return;
-    api.get<{ data: DeliveryZone[] }>(`/locations/${locationId}/delivery-zones`)
-      .then((res) => setZones(res.data))
+    Promise.all([
+      api.get<{ data: DeliveryZone[] }>(`/locations/${locationId}/delivery-zones`),
+      api.get<{ data: LocationInfo }>(`/locations/${locationId}`),
+    ])
+      .then(([zonesRes, locRes]) => {
+        setZones(zonesRes.data);
+        setLocation(locRes.data);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [locationId]);
@@ -101,147 +124,175 @@ export default function DeliveryZoneList() {
     }
   };
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Delivery Zones</h1>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
-        >
-          {showForm ? 'Cancel' : 'Add Zone'}
-        </button>
-      </div>
+  // Sort by area ascending so the inner zone draws on top of the outer ones.
+  const sortedZones = useMemo(
+    () => [...zones].sort((a, b) => polygonArea(b.boundaries) - polygonArea(a.boundaries)),
+    [zones],
+  );
 
-      {error && <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-4">{error}</div>}
+  return (
+    <div className="max-w-7xl mx-auto px-6 lg:px-10 py-8 lg:py-10">
+      {/* Editorial header */}
+      <header className="mb-8">
+        <div className="flex items-center gap-3">
+          <span className="block h-px w-10 bg-saffron" />
+          <span className="eyebrow text-saffron">Operations · Catchment</span>
+        </div>
+        <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+          <h1 className="font-display text-4xl text-ink leading-tight">Delivery Catchment</h1>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className={`group inline-flex items-center gap-2 font-ui text-xs uppercase tracking-eyebrow px-5 py-2.5 transition-colors ${
+              showForm
+                ? 'border border-tobacco/40 text-ink hover:bg-paper-200'
+                : 'bg-ink text-paper hover:bg-saffron'
+            }`}
+          >
+            {showForm ? 'Cancel' : 'Add Zone'}
+            {!showForm && <span className="transition-transform group-hover:translate-x-0.5">→</span>}
+          </button>
+        </div>
+        <p className="font-editorial italic text-base text-ink-soft mt-2 max-w-xl">
+          Each ring around Moksha is a delivery polygon — fee, minimum order,
+          ETA, and the cutoff time before the kitchen locks tomorrow's count.
+        </p>
+        <div className="rule-strong mt-6" />
+      </header>
+
+      {error && <div className="border border-saffron text-saffron-deep p-4 mb-6 font-ui text-sm">{error}</div>}
+
+      {/* Polygon map preview */}
+      {location && location.lat != null && location.lng != null && sortedZones.length > 0 && (
+        <PolygonMap location={location} zones={sortedZones} />
+      )}
 
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6 space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Zone Name</label>
+        <form onSubmit={handleCreate} className="relative border border-ink bg-paper-50 p-6 lg:p-8 mb-10 space-y-6">
+          <span className="absolute -top-2.5 left-5 bg-paper-50 px-2 eyebrow text-saffron">New Zone</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <Field label="Zone Name" required>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"
-                placeholder="e.g., Downtown"
+                placeholder="e.g., Schwenningen Mitte"
+                className="w-full bg-transparent border-0 border-b border-ink/30 focus:border-saffron outline-none px-0 py-2 font-ui text-sm placeholder:text-ink-mute"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Charge ($)</label>
+            </Field>
+            <Field label="Delivery Charge (€)">
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={charge}
                 onChange={(e) => setCharge(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"
+                className="w-full bg-transparent border-0 border-b border-ink/30 focus:border-saffron outline-none px-0 py-2 font-mono-tabular text-sm"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Min Order ($)</label>
+            </Field>
+            <Field label="Min Order (€)">
               <input
                 type="number"
                 step="0.01"
                 min="0"
                 value={minOrder}
                 onChange={(e) => setMinOrder(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"
+                className="w-full bg-transparent border-0 border-b border-ink/30 focus:border-saffron outline-none px-0 py-2 font-mono-tabular text-sm"
               />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Next-day cutoff (HH:MM)</label>
+            </Field>
+            <Field label="Next-day cutoff (HH:MM)" hint="When the order book closes the night before delivery.">
               <input
                 type="time"
                 value={cutoffTime}
                 onChange={(e) => setCutoffTime(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"
+                className="w-full bg-transparent border-0 border-b border-ink/30 focus:border-saffron outline-none px-0 py-2 font-mono-tabular text-sm"
               />
-              <p className="text-xs text-gray-500 mt-1">Orders for the next day are locked at this time. Leave blank for no cutoff.</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Estimated delivery (minutes)</label>
+            </Field>
+            <Field label="Estimated delivery (min)" hint="Shown to customers when their address matches this zone.">
               <input
                 type="number"
                 min="0"
                 value={etaMinutes}
                 onChange={(e) => setEtaMinutes(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none"
                 placeholder="e.g., 25"
+                className="w-full bg-transparent border-0 border-b border-ink/30 focus:border-saffron outline-none px-0 py-2 font-mono-tabular text-sm"
               />
-              <p className="text-xs text-gray-500 mt-1">Shown to the customer when this zone matches their address.</p>
-            </div>
+            </Field>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Boundaries (JSON polygon)</label>
+          <Field label="Boundaries — JSON polygon">
             <textarea
               value={boundariesJson}
               onChange={(e) => setBoundariesJson(e.target.value)}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none font-mono"
               placeholder='[[lat, lng], [lat, lng], ...]'
+              className="w-full bg-paper-100 border border-tobacco/30 focus:border-saffron outline-none px-3 py-2 font-mono-tabular text-xs"
             />
-          </div>
+          </Field>
           <button
             type="submit"
             disabled={saving}
-            className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+            className="bg-ink text-paper px-6 py-3 font-ui text-xs uppercase tracking-eyebrow hover:bg-saffron transition-colors disabled:opacity-50"
           >
-            {saving ? 'Creating...' : 'Create Zone'}
+            {saving ? 'Creating…' : 'Create Zone'}
           </button>
         </form>
       )}
 
       {loading && (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" role="status" aria-label="Loading" />
+        <div className="flex justify-center py-16 font-mono-tabular text-xs tracking-eyebrow uppercase text-ink-mute">
+          Loading the catchment…
         </div>
       )}
 
       {!loading && zones.length === 0 && !showForm && (
-        <p className="text-gray-500 text-center py-12">No delivery zones configured.</p>
+        <div className="text-center py-16">
+          <p className="font-editorial italic text-ink-mute">No delivery zones configured yet.</p>
+        </div>
       )}
 
       {!loading && zones.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="border border-tobacco/40 bg-paper-50 overflow-hidden">
           <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Name</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Charge</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Min Order</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Cutoff</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">ETA</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>
+            <thead className="bg-paper-100 border-b border-tobacco/30">
+              <tr>
+                <Th>Zone</Th>
+                <Th align="right">Charge</Th>
+                <Th align="right">Min Order</Th>
+                <Th align="right">Cutoff</Th>
+                <Th align="right">ETA</Th>
+                <Th>Status</Th>
+                <Th align="right">Actions</Th>
               </tr>
             </thead>
             <tbody>
               {zones.map((zone) => (
-                <tr key={zone.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{zone.name}</td>
-                  <td className="px-4 py-3 text-right">${zone.charge.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right">${zone.minOrder.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">{zone.cutoffTime || '—'}</td>
-                  <td className="px-4 py-3 text-right text-gray-600">{zone.etaMinutes ? `${zone.etaMinutes} min` : '—'}</td>
-                  <td className="px-4 py-3">
+                <tr key={zone.id} className="border-b border-tobacco/15 last:border-0 hover:bg-paper-100 transition-colors">
+                  <td className="px-4 py-3.5">
+                    <span className="font-display text-base text-ink leading-tight">{zone.name}</span>
+                  </td>
+                  <td className="px-4 py-3.5 text-right font-mono-tabular text-ink">€{zone.charge.toFixed(2)}</td>
+                  <td className="px-4 py-3.5 text-right font-mono-tabular text-ink">€{zone.minOrder.toFixed(2)}</td>
+                  <td className="px-4 py-3.5 text-right font-mono-tabular text-saffron">{zone.cutoffTime || '—'}</td>
+                  <td className="px-4 py-3.5 text-right font-mono-tabular text-ink">
+                    {zone.etaMinutes ? `${zone.etaMinutes} min` : '—'}
+                  </td>
+                  <td className="px-4 py-3.5">
                     <button
                       onClick={() => toggleActive(zone)}
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${zone.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
-                        }`}
+                      className={`font-mono-tabular text-[10px] uppercase tracking-eyebrow px-2 py-1 ${
+                        zone.isActive
+                          ? 'bg-bottle/10 text-bottle'
+                          : 'bg-paper-200 text-ink-mute'
+                      }`}
                       aria-label={`${zone.isActive ? 'Deactivate' : 'Activate'} zone ${zone.name}`}
                     >
                       {zone.isActive ? 'Active' : 'Inactive'}
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3.5 text-right">
                     <button
                       onClick={() => deleteZone(zone.id)}
-                      className="text-red-600 hover:text-red-700 text-xs font-medium"
+                      className="font-ui text-xs uppercase tracking-eyebrow text-saffron-deep hover:text-saffron"
                       aria-label={`Delete zone ${zone.name}`}
                     >
                       Delete
@@ -255,4 +306,194 @@ export default function DeliveryZoneList() {
       )}
     </div>
   );
+}
+
+function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
+  return (
+    <th className={`px-4 py-3 font-mono-tabular text-[10px] uppercase tracking-eyebrow text-ink-mute text-${align}`}>
+      {children}
+    </th>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  required,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="block eyebrow mb-1">
+        {label}
+        {required && <span className="text-saffron ml-0.5">*</span>}
+      </label>
+      {children}
+      {hint && <p className="font-editorial italic text-xs text-ink-mute mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+function polygonArea(polygon: [number, number][] | null): number {
+  if (!polygon || polygon.length < 3) return 0;
+  let area = 0;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    area += (polygon[i][1] + polygon[j][1]) * (polygon[i][0] - polygon[j][0]);
+  }
+  return Math.abs(area / 2);
+}
+
+interface MapProps {
+  location: LocationInfo;
+  zones: DeliveryZone[];
+}
+
+// Saffron / tobacco / ink for the three nested zones — same editorial palette.
+const ZONE_COLOURS = [
+  { fill: '#c2410c', stroke: '#c2410c' }, // saffron — inner, hottest
+  { fill: '#7c5e3c', stroke: '#7c5e3c' }, // tobacco — middle
+  { fill: '#1a1410', stroke: '#1a1410' }, // ink — outer, coolest
+];
+
+/**
+ * Real OSM map for the delivery catchment — CartoDB Positron tiles give the
+ * map a desaturated paper-feel that matches the editorial palette without
+ * needing an API key. Each zone is drawn as a coloured polygon with a
+ * permanent tooltip showing its name; the location is anchored with a
+ * saffron circle marker.
+ */
+function PolygonMap({ location, zones }: MapProps) {
+  const centre: [number, number] = [location.lat!, location.lng!];
+
+  // Compute the bounding box of the outermost zone so we can frame nicely.
+  const allPts = zones.flatMap((z) => z.boundaries || []);
+  const bounds = allPts.length > 0
+    ? L.latLngBounds(allPts.map(([lat, lng]) => L.latLng(lat, lng)))
+    : null;
+
+  return (
+    <div className="mb-10 border border-tobacco/40 bg-paper-100 p-5 lg:p-7">
+      <div className="flex items-baseline justify-between mb-5">
+        <div>
+          <span className="eyebrow">Catchment Map</span>
+          <h2 className="font-display text-2xl text-ink mt-1 leading-tight">
+            Moksha — Schwenningen
+          </h2>
+          <p className="font-editorial italic text-sm text-ink-soft mt-1 max-w-md">
+            Click or hover a polygon to see its zone. The saffron pin is the kitchen.
+          </p>
+        </div>
+        <div className="text-right">
+          <span className="eyebrow eyebrow-mute">Pin</span>
+          <p className="font-mono-tabular text-sm text-ink mt-1">
+            {location.lat?.toFixed(4)}, {location.lng?.toFixed(4)}
+          </p>
+        </div>
+      </div>
+
+      <div className="relative" style={{ height: 520 }}>
+        <MapContainer
+          center={centre}
+          zoom={12}
+          scrollWheelZoom={false}
+          style={{ height: '100%', width: '100%' }}
+          className="border border-tobacco/30"
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            subdomains={['a', 'b', 'c', 'd']}
+            maxZoom={20}
+          />
+
+          {/* Zones drawn outer-to-inner so the saffron inner ring sits on top */}
+          {zones.map((zone, i) => {
+            if (!zone.boundaries) return null;
+            const colour = ZONE_COLOURS[i % ZONE_COLOURS.length];
+            return (
+              <Polygon
+                key={zone.id}
+                positions={zone.boundaries as [number, number][]}
+                pathOptions={{
+                  color: colour.stroke,
+                  weight: 1.5,
+                  fillColor: colour.fill,
+                  fillOpacity: 0.12,
+                }}
+              >
+                <Tooltip
+                  direction="top"
+                  sticky
+                  className="!bg-paper !border-tobacco !text-ink !font-mono-tabular !text-[10px] !uppercase !tracking-wider !shadow-none"
+                >
+                  <span style={{ color: colour.stroke }}>{zone.name}</span>
+                  <span className="opacity-70">
+                    {' · '}
+                    {zone.cutoffTime || '—'} · €{zone.charge.toFixed(2)} · {zone.etaMinutes || '—'} min
+                  </span>
+                </Tooltip>
+              </Polygon>
+            );
+          })}
+
+          {/* Kitchen pin */}
+          <CircleMarker
+            center={centre}
+            radius={9}
+            pathOptions={{
+              color: '#fbf7ee',
+              weight: 3,
+              fillColor: '#c2410c',
+              fillOpacity: 1,
+            }}
+          >
+            <Tooltip
+              permanent
+              direction="right"
+              offset={[10, 0]}
+              className="!bg-ink !text-paper !border-0 !font-display !text-base !shadow-none"
+            >
+              Moksha
+            </Tooltip>
+          </CircleMarker>
+
+          {bounds && <FitBounds bounds={bounds} />}
+        </MapContainer>
+      </div>
+
+      {/* Zone legend — colour key beneath the map */}
+      <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+        {zones.map((zone, i) => {
+          const colour = ZONE_COLOURS[i % ZONE_COLOURS.length];
+          return (
+            <div key={zone.id} className="flex items-center gap-3 border border-tobacco/30 bg-paper-50 px-3 py-2">
+              <span
+                className="block w-3 h-3 shrink-0"
+                style={{ background: colour.fill, opacity: 0.55, border: `1.5px solid ${colour.stroke}` }}
+              />
+              <div className="min-w-0">
+                <p className="font-display text-sm text-ink leading-tight truncate">{zone.name}</p>
+                <p className="font-mono-tabular text-[10px] uppercase tracking-wider text-ink-mute">
+                  {zone.cutoffTime || '—'} · €{zone.charge.toFixed(2)} · {zone.etaMinutes || '—'} min
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FitBounds({ bounds }: { bounds: L.LatLngBounds }) {
+  const map = useMap();
+  useEffect(() => {
+    map.fitBounds(bounds, { padding: [40, 40] });
+  }, [map, bounds]);
+  return null;
 }

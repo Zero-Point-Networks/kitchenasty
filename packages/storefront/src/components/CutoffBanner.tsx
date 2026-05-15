@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 interface Zone {
   id: string;
@@ -24,24 +24,37 @@ function nextCutoffDate(cutoffTime: string): Date {
   return cutoff;
 }
 
-function formatRemaining(ms: number): string {
-  if (ms <= 0) return '0m';
-  const totalMin = Math.floor(ms / 60_000);
-  const h = Math.floor(totalMin / 60);
-  const m = totalMin % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  const s = Math.floor((ms % 60_000) / 1000);
-  return `${m}m ${s}s`;
+interface Remaining {
+  h: number;
+  m: number;
+  s: number;
+  totalMs: number;
+}
+
+function remaining(target: Date, now: number): Remaining {
+  const ms = Math.max(0, target.getTime() - now);
+  const totalSec = Math.floor(ms / 1000);
+  return {
+    h: Math.floor(totalSec / 3600),
+    m: Math.floor((totalSec % 3600) / 60),
+    s: totalSec % 60,
+    totalMs: ms,
+  };
+}
+
+const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+function dateLabel(d: Date): string {
+  return `${WEEKDAYS[d.getDay()]} ${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]}`;
 }
 
 /**
- * Surfaces the next-day order cutoff to the customer.
- *
- * Picks the earliest `cutoffTime` across active delivery zones for the first
- * active location. Renders nothing if no zones have a cutoff configured.
+ * "Tonight's Cutoff" banner — a railway-station departure board pinned to the
+ * top of every page. Surfaces the *earliest* active zone cutoff so the
+ * customer knows the urgency in one glance.
  */
 export default function CutoffBanner() {
-  const { t } = useTranslation();
   const [cutoffTime, setCutoffTime] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
 
@@ -56,10 +69,11 @@ export default function CutoffBanner() {
         const zoneJson = await zoneRes.json();
         const zones: Zone[] = (zoneJson.data ?? []).filter((z: Zone) => z.isActive && z.cutoffTime);
         if (zones.length === 0) return;
+        // Earliest cutoff (latest *deadline urgency*) drives the banner.
         const earliest = zones.map((z) => z.cutoffTime!).sort()[0];
         setCutoffTime(earliest);
       } catch {
-        // ignore
+        // banner is best-effort — never blocks the page
       }
     })();
   }, []);
@@ -70,31 +84,91 @@ export default function CutoffBanner() {
     return () => clearInterval(id);
   }, [cutoffTime]);
 
-  if (!cutoffTime) return null;
+  const cutoff = useMemo(() => (cutoffTime ? nextCutoffDate(cutoffTime) : null), [cutoffTime, now]);
+  const r = useMemo(() => (cutoff ? remaining(cutoff, now) : null), [cutoff, now]);
 
-  const cutoff = nextCutoffDate(cutoffTime);
-  const remaining = cutoff.getTime() - now;
-  const isLocked = remaining <= 0;
+  if (!cutoffTime || !cutoff || !r) return null;
+
+  const isLocked = r.totalMs <= 0;
+  const cutoffDateStamp = dateLabel(cutoff);
+
+  if (isLocked) {
+    return (
+      <div className="relative isolate w-full bg-ink text-paper">
+        <div className="rule-strong absolute inset-x-0 top-0" style={{ background: '#7c5e3c' }} />
+        <div className="rule-strong absolute inset-x-0 bottom-0" style={{ background: '#7c5e3c' }} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-center gap-4 text-paper">
+          <span className="eyebrow eyebrow-mute text-paper/70">Window Closed</span>
+          <span className="font-display text-base sm:text-lg">Today's lunch slot is locked in.</span>
+          <span className="eyebrow text-paper/60">Reopens 00:01</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={`w-full ${isLocked ? 'bg-gray-800' : 'bg-primary-600'} text-white text-sm`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-center gap-3 flex-wrap">
-        {isLocked ? (
-          <span>
-            {t('cutoff.lockedToday', { defaultValue: "Today's cutoff has passed — orders for the next available slot open soon." })}
-          </span>
-        ) : (
-          <>
-            <span className="font-medium">
-              {t('cutoff.headline', { defaultValue: "Order tomorrow's lunch by {{time}}", time: cutoffTime })}
+    <div
+      className="relative isolate w-full"
+      style={{
+        background:
+          'linear-gradient(180deg, var(--paper-2) 0%, var(--paper-3) 100%)',
+      }}
+    >
+      <div className="rule-strong absolute inset-x-0 top-0" />
+      <div className="rule-strong absolute inset-x-0 bottom-0" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3">
+        <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+          {/* Left: kicker + date — looks like a magazine slug line */}
+          <div className="hidden sm:flex flex-col leading-tight">
+            <span className="eyebrow">Tonight's Cutoff</span>
+            <span className="font-mono-tabular text-[10px] tracking-[0.18em] text-ink-mute mt-0.5">
+              {cutoffDateStamp}
             </span>
-            <span className="hidden sm:inline opacity-80">·</span>
-            <span className="font-mono tabular-nums">
-              {t('cutoff.remaining', { defaultValue: '{{remaining}} left', remaining: formatRemaining(remaining) })}
-            </span>
-          </>
-        )}
+          </div>
+
+          {/* Center: the clock — tabular mono, big, calm.
+              Colon pulses gently once a second. */}
+          <div className="flex items-baseline gap-3 sm:gap-5 mx-auto sm:mx-0">
+            <div className="flex items-baseline">
+              <span className="font-mono-tabular text-2xl sm:text-3xl font-medium text-ink leading-none">
+                {cutoffTime.split(':')[0]}
+              </span>
+              <span className="font-mono-tabular text-2xl sm:text-3xl font-medium text-ink leading-none clock-colon">:</span>
+              <span className="font-mono-tabular text-2xl sm:text-3xl font-medium text-ink leading-none">
+                {cutoffTime.split(':')[1]}
+              </span>
+            </div>
+            <span className="editorial-diamond text-tobacco hidden sm:inline-block" />
+            <div className="flex items-baseline gap-1 font-mono-tabular text-xs sm:text-sm tracking-wide text-ink-soft">
+              <CountUnit value={r.h} unit="H" />
+              <span className="text-ink-mute">·</span>
+              <CountUnit value={r.m} unit="M" />
+              <span className="text-ink-mute">·</span>
+              <CountUnit value={r.s} unit="S" />
+              <span className="ml-1 text-[10px] uppercase tracking-eyebrow text-ink-mute">left</span>
+            </div>
+          </div>
+
+          {/* Right: ghost CTA — a quiet door, not a shout */}
+          <Link
+            to="/menu"
+            className="hidden sm:flex items-center gap-2 font-ui text-[11px] uppercase tracking-eyebrow text-ink hover:text-saffron transition-colors group"
+          >
+            Reserve tomorrow's lunch
+            <span className="inline-block transition-transform group-hover:translate-x-0.5">→</span>
+          </Link>
+        </div>
       </div>
     </div>
+  );
+}
+
+function CountUnit({ value, unit }: { value: number; unit: string }) {
+  return (
+    <span>
+      <span className="font-medium text-ink">{String(value).padStart(2, '0')}</span>
+      <span className="text-[9px] uppercase tracking-eyebrow text-ink-mute ml-0.5">{unit}</span>
+    </span>
   );
 }
