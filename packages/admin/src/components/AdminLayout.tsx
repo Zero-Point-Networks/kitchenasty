@@ -146,7 +146,7 @@ export default function AdminLayout({ children, onLogout }: { children: React.Re
             <span className="block h-px w-6" style={{ background: 'var(--saffron)' }} />
             <span className="eyebrow" style={{ color: 'var(--saffron)' }}>Kitchen Control</span>
           </div>
-          <h1 className="font-display text-2xl text-paper mt-2 leading-none">Eat Inka</h1>
+          <h1 className="font-display text-2xl text-paper mt-2 leading-none">Inka</h1>
           <p className="font-mono-tabular text-[10px] text-paper/55 tracking-wider uppercase mt-1.5">
             Newsroom · Schwenningen
           </p>

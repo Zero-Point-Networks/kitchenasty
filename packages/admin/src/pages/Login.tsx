@@ -45,7 +45,7 @@ export default function Login({ onLogin }: Props) {
             <span className="eyebrow text-saffron">Kitchen Control</span>
             <span className="block h-px w-8 bg-saffron" />
           </div>
-          <h1 className="font-display text-5xl text-ink leading-none">Eat Inka</h1>
+          <h1 className="font-display text-5xl text-ink leading-none">Inka</h1>
           <p className="font-mono-tabular text-[10px] tracking-eyebrow uppercase text-ink-mute mt-3">
             Newsroom · Schwenningen · Staff Only
           </p>

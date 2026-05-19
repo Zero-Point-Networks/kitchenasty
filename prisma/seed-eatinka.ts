@@ -39,7 +39,7 @@ async function main() {
     create: {
       slug: 'moksha-schwenningen',
       name: 'Moksha — Schwenningen',
-      description: 'Authentic Indian kitchen powering Eat Inka corporate lunch deliveries.',
+      description: 'Authentic Indian kitchen powering Inka corporate lunch deliveries.',
       address: 'Bürkstraße 4',
       city: 'Villingen-Schwenningen',
       state: 'BW',
@@ -261,8 +261,8 @@ async function main() {
   await prisma.siteSettings.upsert({
     where: { id: 'default' },
     update: {
-      siteName: 'Eat Inka',
-      siteTitle: "Eat Inka — Tomorrow's Lunch, Delivered",
+      siteName: 'Inka',
+      siteTitle: "Inka — Tomorrow's Lunch, Delivered",
       storefrontTemplate: 'elegant',
       colorPrimary: '#c2410c',
       colorSecondary: '#15803d',
@@ -291,8 +291,8 @@ async function main() {
     },
     create: {
       id: 'default',
-      siteName: 'Eat Inka',
-      siteTitle: "Eat Inka — Tomorrow's Lunch, Delivered",
+      siteName: 'Inka',
+      siteTitle: "Inka — Tomorrow's Lunch, Delivered",
       storefrontTemplate: 'elegant',
       colorPrimary: '#c2410c',
       colorSecondary: '#15803d',
