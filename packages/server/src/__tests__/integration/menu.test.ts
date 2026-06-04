@@ -16,6 +16,7 @@ vi.mock('../../lib/db.js', () => {
     allergen: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), delete: vi.fn() },
     mealtime: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
     orderItem: { count: vi.fn() },
+    menuPublication: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
   };
   return { default: mockPrisma, prisma: mockPrisma };
 });
@@ -504,6 +505,51 @@ describe('Menu API - Integration Tests', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
+    });
+  });
+
+  // ============================================================
+  // MENU PUBLICATIONS (per-day menu, used by the storefront)
+  // ============================================================
+  describe('GET /api/menu/publications', () => {
+    const samplePub2026_06_05 = {
+      id: 'pub-1',
+      date: new Date('2026-06-05T00:00:00.000Z'),
+      notes: null,
+      publishedAt: new Date(),
+      items: [
+        {
+          id: 'pi-1',
+          sortOrder: 0,
+          menuItemId: 'item-1',
+          menuItem: { id: 'item-1', name: 'Caesar Salad', slug: 'caesar-salad', price: 12.99, image: null },
+        },
+      ],
+    };
+
+    it('returns the publication for the requested date', async () => {
+      // Controller filters with where.date = { gte: from, lte: to }; we
+      // simulate Prisma honouring that by only returning the matching pub.
+      mockedPrisma.menuPublication.findMany.mockResolvedValue([samplePub2026_06_05] as any);
+
+      const res = await request(app).get('/api/menu/publications?from=2026-06-05&to=2026-06-05');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(1);
+      expect(res.body.data[0].items[0].menuItem.name).toBe('Caesar Salad');
+      const call = mockedPrisma.menuPublication.findMany.mock.calls[0]?.[0] as any;
+      // Both bounds should be present in the where clause
+      expect(call?.where?.date?.gte).toBeInstanceOf(Date);
+      expect(call?.where?.date?.lte).toBeInstanceOf(Date);
+    });
+
+    it('returns empty list for a date with no publication', async () => {
+      mockedPrisma.menuPublication.findMany.mockResolvedValue([]);
+
+      const res = await request(app).get('/api/menu/publications?from=2026-06-06&to=2026-06-06');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(0);
     });
   });
 });

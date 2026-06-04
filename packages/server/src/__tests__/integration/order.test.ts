@@ -17,6 +17,8 @@ vi.mock('../../lib/db.js', () => {
     loyaltyTransaction: { create: vi.fn() },
     automationRule: { findMany: vi.fn() },
     category: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), count: vi.fn() },
+    coupon: { findUnique: vi.fn(), update: vi.fn() },
+    siteSettings: { findUnique: vi.fn() },
   };
   return { default: mockPrisma, prisma: mockPrisma };
 });
@@ -73,6 +75,9 @@ const sampleOrder = {
 describe('Order API - Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: no custom lock-in cutoff (controller falls back to 21:00).
+    // Individual tests can override this for cutoff scenarios.
+    mockedPrisma.siteSettings.findUnique.mockResolvedValue(null as any);
   });
 
   // ============================================================
@@ -308,6 +313,192 @@ describe('Order API - Integration Tests', () => {
         .send({ status: 'CONFIRMED' });
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  // ============================================================
+  // COUPON APPLICATION (smoke)
+  // ============================================================
+  describe('POST /api/orders — coupon application', () => {
+    const percentageCoupon = {
+      id: 'coupon-pct',
+      code: 'TENOFF',
+      type: 'PERCENTAGE',
+      value: 10,
+      minOrder: 10,
+      maxDiscount: null,
+      usageLimit: null,
+      usageCount: 4,
+      perCustomer: 1,
+      startsAt: null,
+      expiresAt: null,
+      isActive: true,
+    };
+    const freeDeliveryCoupon = {
+      id: 'coupon-fd',
+      code: 'FREESHIP',
+      type: 'FREE_DELIVERY',
+      value: 0,
+      minOrder: 0,
+      maxDiscount: null,
+      usageLimit: null,
+      usageCount: 0,
+      perCustomer: 1,
+      startsAt: null,
+      expiresAt: null,
+      isActive: true,
+    };
+    const sampleItemForCoupon = { ...sampleMenuItem, price: 9 }; // qty 2 → subtotal 18
+
+    it('applies a PERCENTAGE coupon: discount 1.80, total drops, usageCount increments', async () => {
+      mockedPrisma.menuItem.findMany.mockResolvedValue([sampleItemForCoupon] as any);
+      mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      mockedPrisma.coupon.findUnique.mockResolvedValue(percentageCoupon as any);
+      mockedPrisma.coupon.update.mockResolvedValue({ ...percentageCoupon, usageCount: 5 } as any);
+      mockedPrisma.order.create.mockImplementation(async (args: any) => ({
+        ...sampleOrder,
+        subtotal: args.data.subtotal,
+        discount: args.data.discount,
+        deliveryFee: args.data.deliveryFee,
+        total: args.data.total,
+        couponId: args.data.couponId,
+        items: [],
+      }) as any);
+      mockedPrisma.automationRule.findMany.mockResolvedValue([]);
+
+      const res = await request(app).post('/api/orders').send({
+        orderType: 'PICKUP',
+        items: [{ menuItemId: 'item-1', quantity: 2 }],
+        couponCode: 'TENOFF',
+        guestName: 'G',
+        guestEmail: 'g@test.com',
+      });
+
+      expect(res.status).toBe(201);
+      // subtotal 18 * 10% = 1.80
+      expect(res.body.data.discount).toBeCloseTo(1.80, 2);
+      expect(res.body.data.couponId).toBe('coupon-pct');
+      // Without coupon: 18 + 1.44 tax = 19.44. With: 19.44 - 1.80 = 17.64
+      expect(res.body.data.total).toBeLessThan(19.44);
+      expect(mockedPrisma.coupon.update).toHaveBeenCalledWith({
+        where: { id: 'coupon-pct' },
+        data: { usageCount: { increment: 1 } },
+      });
+    });
+
+    it('FREE_DELIVERY coupon zeroes deliveryFee on a delivery order', async () => {
+      mockedPrisma.menuItem.findMany.mockResolvedValue([sampleItemForCoupon] as any);
+      mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      mockedPrisma.deliveryZone.findFirst.mockResolvedValue({ id: 'z1', charge: 4.99 } as any);
+      mockedPrisma.deliveryZone.findMany.mockResolvedValue([]);
+      mockedPrisma.coupon.findUnique.mockResolvedValue(freeDeliveryCoupon as any);
+      mockedPrisma.coupon.update.mockResolvedValue({ ...freeDeliveryCoupon, usageCount: 1 } as any);
+      mockedPrisma.order.create.mockImplementation(async (args: any) => ({
+        ...sampleOrder,
+        orderType: 'DELIVERY',
+        subtotal: args.data.subtotal,
+        discount: args.data.discount,
+        deliveryFee: args.data.deliveryFee,
+        total: args.data.total,
+        couponId: args.data.couponId,
+        items: [],
+      }) as any);
+      mockedPrisma.automationRule.findMany.mockResolvedValue([]);
+
+      const res = await request(app).post('/api/orders').send({
+        orderType: 'DELIVERY',
+        items: [{ menuItemId: 'item-1', quantity: 2 }],
+        couponCode: 'FREESHIP',
+        address: { line1: '123 Main St', city: 'X', state: 'Y', zip: '00000' },
+        guestName: 'G',
+        guestEmail: 'g@test.com',
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.deliveryFee).toBe(0);
+      expect(res.body.data.discount).toBe(0); // FREE_DELIVERY does not flow into discount
+      expect(res.body.data.couponId).toBe('coupon-fd');
+    });
+
+    it('returns 400 (NOT 500) when coupon is unknown', async () => {
+      mockedPrisma.menuItem.findMany.mockResolvedValue([sampleItemForCoupon] as any);
+      mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      mockedPrisma.coupon.findUnique.mockResolvedValue(null);
+
+      const res = await request(app).post('/api/orders').send({
+        orderType: 'PICKUP',
+        items: [{ menuItemId: 'item-1', quantity: 2 }],
+        couponCode: 'NOSUCH',
+        guestName: 'G',
+        guestEmail: 'g@test.com',
+      });
+
+      // CouponError("Invalid coupon code", 404) → mapped to its statusCode
+      expect([400, 404]).toContain(res.status);
+      expect(res.body.success).toBe(false);
+    });
+  });
+
+  // ============================================================
+  // LOCK-IN CUTOFF (smoke — regression on 2c1fe4a)
+  // ============================================================
+  describe('POST /api/orders — lock-in cutoff', () => {
+    it('returns 400 (not 500) when item.forDate is past the cutoff', async () => {
+      mockedPrisma.menuItem.findMany.mockResolvedValue([sampleMenuItem] as any);
+      mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      // Cutoff already passed: 00:00. Any forDate in the future still
+      // requires the order BEFORE 00:00 the day before — which by
+      // definition has already passed for "tomorrow".
+      mockedPrisma.siteSettings.findUnique.mockResolvedValue({
+        id: 'default',
+        orderSettings: { lockInCutoff: '00:00' },
+      } as any);
+      mockedPrisma.order.create.mockResolvedValue(sampleOrder as any);
+      mockedPrisma.automationRule.findMany.mockResolvedValue([]);
+
+      // forDate = tomorrow (cutoff was 00:00 yesterday — already past)
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const forDate = tomorrow.toISOString().slice(0, 10);
+
+      const res = await request(app).post('/api/orders').send({
+        orderType: 'PICKUP',
+        items: [{ menuItemId: 'item-1', quantity: 1, forDate }],
+        guestName: 'G',
+        guestEmail: 'g@test.com',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(String(res.body.error)).toMatch(/Lock-in|cutoff/i);
+      // Crucially: prisma.order.create must NOT have been called
+      expect(mockedPrisma.order.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts the order when forDate is well within the cutoff window', async () => {
+      mockedPrisma.menuItem.findMany.mockResolvedValue([sampleMenuItem] as any);
+      mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      // Cutoff at 23:59 — anything before midnight of D-1 is allowed.
+      mockedPrisma.siteSettings.findUnique.mockResolvedValue({
+        id: 'default',
+        orderSettings: { lockInCutoff: '23:59' },
+      } as any);
+      mockedPrisma.order.create.mockResolvedValue(sampleOrder as any);
+      mockedPrisma.automationRule.findMany.mockResolvedValue([]);
+
+      // forDate = 10 days out, well within the 14-day window
+      const future = new Date();
+      future.setDate(future.getDate() + 10);
+      const forDate = future.toISOString().slice(0, 10);
+
+      const res = await request(app).post('/api/orders').send({
+        orderType: 'PICKUP',
+        items: [{ menuItemId: 'item-1', quantity: 1, forDate }],
+        guestName: 'G',
+        guestEmail: 'g@test.com',
+      });
+
+      expect(res.status).toBe(201);
     });
   });
 });
