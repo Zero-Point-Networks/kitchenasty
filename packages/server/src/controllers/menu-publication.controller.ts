@@ -82,7 +82,7 @@ export async function upsertPublication(req: Request, res: Response): Promise<vo
           publishedAt: new Date(),
           items: {
             deleteMany: {},
-            create: uniqueIds.map((menuItemId, idx) => ({ menuItemId, sortOrder: idx })),
+            create: uniqueIds.map((id, idx) => ({ menuItem: { connect: { id } }, sortOrder: idx })),
           },
         },
         include: { items: true },
@@ -91,7 +91,7 @@ export async function upsertPublication(req: Request, res: Response): Promise<vo
         data: {
           date,
           notes,
-          items: { create: uniqueIds.map((menuItemId, idx) => ({ menuItemId, sortOrder: idx })) },
+          items: { create: uniqueIds.map((id, idx) => ({ menuItem: { connect: { id } }, sortOrder: idx })) },
         },
         include: { items: true },
       });

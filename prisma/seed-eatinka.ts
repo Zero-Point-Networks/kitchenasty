@@ -376,14 +376,14 @@ async function main() {
             publishedAt: new Date(),
             items: {
               deleteMany: {},
-              create: slice.map((menuItemId, idx) => ({ menuItemId, sortOrder: idx })),
+              create: slice.map((id, idx) => ({ menuItem: { connect: { id } }, sortOrder: idx })),
             },
           },
         })
       : await prisma.menuPublication.create({
           data: {
             date,
-            items: { create: slice.map((menuItemId, idx) => ({ menuItemId, sortOrder: idx })) },
+            items: { create: slice.map((id, idx) => ({ menuItem: { connect: { id } }, sortOrder: idx })) },
           },
         });
     console.log(`[eatinka] published ${date.toISOString().slice(0, 10)}: ${slice.length} items (${pub.id.slice(0, 8)})`);

@@ -29,7 +29,25 @@
       "WebFetch(domain:www.getapp.com)",
       "WebFetch(domain:intlayer.org)",
       "mcp__plugin_context7_context7__resolve-library-id",
-      "mcp__plugin_context7_context7__query-docs"
+      "mcp__plugin_context7_context7__query-docs",
+      "Bash(gh run *)",
+      "Bash(docker exec *)",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "Bash(curl -s \"http://localhost:3000/api/menu/items?limit=50\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('total:', d.get\\('pagination',{}\\).get\\('total','?'\\)\\); [print\\(i['slug'], '-', i['name'], '-', i.get\\('isActive'\\)\\) for i in d['data']]\")",
+      "Bash(curl -s \"http://localhost:3000/api/locations/cmp5x73q900006v07jzca10y2/delivery-zones/check?lat=48.095&lng=8.580\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['data'].get\\('name'\\), '·', d['data'].get\\('cutoffTime'\\), '·', d['data'].get\\('etaMinutes'\\), 'min'\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/locations/cmp5x73q900006v07jzca10y2/delivery-zones/check?lat=48.5&lng=9.5\")",
+      "Bash(python3 -c \"import json,sys; print\\(json.load\\(sys.stdin\\)\\)\")",
+      "Bash(curl -s \"http://localhost:3000/api/menu/items?limit=1\")",
+      "Bash(python3 -c \"import json,sys; print\\(json.load\\(sys.stdin\\)['data'][0]['id']\\)\")",
+      "Bash",
+      "Write",
+      "Read",
+      "mcp__plugin_playwright_playwright__browser_resize",
+      "mcp__plugin_playwright_playwright__browser_evaluate",
+      "mcp__plugin_playwright_playwright__browser_console_messages",
+      "mcp__plugin_playwright_playwright__browser_close"
     ]
   }
 }
