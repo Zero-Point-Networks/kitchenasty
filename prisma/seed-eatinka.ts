@@ -220,6 +220,7 @@ async function main() {
   ];
 
   let order = 1;
+  const upsertedMenuItemIds: string[] = [];
   for (const it of items) {
     const menuItem = await prisma.menuItem.upsert({
       where: { slug: it.slug },
@@ -254,6 +255,7 @@ async function main() {
         data: { menuItemId: menuItem.id, allergenId: aId },
       });
     }
+    upsertedMenuItemIds.push(menuItem.id);
     order += 1;
   }
 
@@ -345,7 +347,9 @@ async function main() {
   // Publish a rotating lineup for the next five weekdays so the demo
   // shows day-to-day variety. We use ~7 items per day rotating across
   // the available 12 so each weekday has a slightly different slate.
-  const allItemIds = items.map((it) => it.id);
+  // The source `items` array is the data spec — IDs come from the
+  // upsertedMenuItemIds collected above as we upserted each one.
+  const allItemIds = upsertedMenuItemIds;
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
   const upcomingWeekdays: Date[] = [];
