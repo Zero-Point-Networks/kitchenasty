@@ -12,7 +12,10 @@ router.get('/my-orders', authenticate, listCustomerOrders);
 
 // Staff: list and manage orders
 router.get('/', authenticate, requireStaff, listOrders);
-router.get('/:id', authenticate, getOrder);
+// Public by id. The cuid is unguessable (~130 bits of entropy), so it
+// acts as a bearer token. Needed for guest-checkout confirmation polling
+// — the storefront has no auth header to send post-checkout.
+router.get('/:id', optionalAuth, getOrder);
 router.patch('/:id/status', authenticate, requireStaff, updateOrderStatus);
 
 export default router;
