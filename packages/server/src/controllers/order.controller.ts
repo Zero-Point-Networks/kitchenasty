@@ -7,6 +7,7 @@ import { isAfterCutoff } from '../lib/cutoff.js';
 import { sendEmail, orderConfirmationEmail, orderStatusEmail } from '../lib/email.js';
 import { auditLog } from '../lib/audit.js';
 import { resolveCoupon, CouponError } from './coupon.controller.js';
+import { getStripe } from '../lib/stripe.js';
 
 const orderItemOptionSchema = z.object({
   menuOptionValueId: z.string().min(1),
@@ -560,7 +561,7 @@ export async function getOrder(req: Request<{ id: string }>, res: Response): Pro
       location: { select: { id: true, name: true } },
       items: {
         include: {
-          menuItem: { select: { id: true, name: true, slug: true } },
+          menuItem: { select: { id: true, name: true, image: true, slug: true } },
           options: true,
         },
       },
@@ -572,8 +573,13 @@ export async function getOrder(req: Request<{ id: string }>, res: Response): Pro
     return;
   }
 
-  const user = req.user!;
-  if (user.type !== 'staff' && order.customerId !== user.id) {
+  // optionalAuth — req.user is undefined for guest fetches. Guests get
+  // here via the confirmation page polling /orders/:id with no token;
+  // we let that through because the cuid id is unguessable enough to
+  // act as a bearer for the customer who placed the order. Logged-in
+  // staff/customers still get their normal access check.
+  const user = req.user;
+  if (user && user.type !== 'staff' && order.customerId !== user.id) {
     res.status(403).json({ success: false, error: 'Access denied' });
     return;
   }
@@ -602,6 +608,15 @@ export async function listCustomerOrders(req: Request, res: Response): Promise<v
       orderBy: { createdAt: 'desc' },
       include: {
         location: { select: { id: true, name: true } },
+        // Include line items so the mobile + storefront receipts show
+        // the dish name + image instead of an empty placeholder. menuItem
+        // needs `image` here too — without it the InkRemotePhoto on
+        // /history falls back to the striped placeholder.
+        items: {
+          include: {
+            menuItem: { select: { id: true, name: true, image: true, slug: true } },
+          },
+        },
         _count: { select: { items: true } },
       },
     }),
@@ -664,6 +679,141 @@ export async function updateOrderStatus(req: Request<{ id: string }>, res: Respo
     const { appEvents } = await import('../lib/events.js');
     appEvents.emit('order.statusChanged', { order: updated, previousStatus: order.status });
   } catch {}
+
+  res.json({ success: true, data: updated });
+}
+
+/// Customer-initiated cancellation. Only allowed while every item is
+/// still pre-lock-in (i.e. the kitchen hasn't started prep yet). If the
+/// order was paid via Stripe, the PaymentIntent is fully refunded in the
+/// same call. Post-lock-in cancellation with a partial-refund fee is
+/// tracked separately on the Inka roadmap.
+///
+/// Auth shape mirrors getOrder: optionalAuth. Guests can cancel orders
+/// they placed by hitting this endpoint with the cuid id from their
+/// confirmation page — the id is unguessable enough to act as a bearer.
+/// Logged-in staff/customers go through a normal access check.
+export async function cancelOrder(req: Request<{ id: string }>, res: Response): Promise<void> {
+  const { id } = req.params;
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: {
+      items: true,
+      payments: true,
+    },
+  });
+  if (!order) {
+    res.status(404).json({ success: false, error: 'Order not found' });
+    return;
+  }
+
+  const user = req.user;
+  if (user && user.type !== 'staff' && order.customerId !== user.id) {
+    res.status(403).json({ success: false, error: 'Access denied' });
+    return;
+  }
+
+  if (order.status === 'CANCELLED') {
+    res.status(409).json({ success: false, error: 'Order is already cancelled' });
+    return;
+  }
+  if (order.status === 'DELIVERED' || order.status === 'PICKED_UP') {
+    res.status(409).json({ success: false, error: 'Order is already complete' });
+    return;
+  }
+
+  // Lock-in cutoff lookup — same shape as createOrder. Default 21:00.
+  let cutoffTime = '21:00';
+  {
+    const siteSettings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+    const orderSettings = (siteSettings?.orderSettings as Record<string, unknown> | null) ?? null;
+    const raw = orderSettings?.lockInCutoff;
+    if (typeof raw === 'string' && /^(\d{2}):(\d{2})$/.test(raw)) {
+      cutoffTime = raw;
+    }
+  }
+
+  // For every line that has a forDate, check that we're still before
+  // that day's cutoff. Lines without forDate (legacy) are evaluated
+  // against the order's scheduledAt or today+1.
+  const now = new Date();
+  const datesToCheck: Date[] = [];
+  for (const item of order.items) {
+    if (item.forDate) {
+      datesToCheck.push(new Date(item.forDate));
+    } else if (order.scheduledAt) {
+      datesToCheck.push(new Date(order.scheduledAt));
+    }
+  }
+  if (datesToCheck.length === 0) {
+    // No date hints — treat the order as immediately past-cutoff to be
+    // safe. The customer can still ask staff to cancel via the admin.
+    res.status(409).json({
+      success: false,
+      error: 'This order can no longer be cancelled. Please contact us if you need help.',
+    });
+    return;
+  }
+  const anyPastCutoff = datesToCheck.some((d) => isAfterCutoff(now, d, cutoffTime));
+  if (anyPastCutoff) {
+    res.status(409).json({
+      success: false,
+      error: 'Lock-in for this order has passed. Cancellation with a small fee is coming soon — please contact us in the meantime.',
+    });
+    return;
+  }
+
+  // Issue a full refund on every Payment row that has a Stripe
+  // transactionId. Payment records without a transactionId are likely
+  // pending PaymentIntents the user never finished; nothing to refund.
+  let refundedCents = 0;
+  for (const payment of order.payments) {
+    if (!payment.transactionId) continue;
+    try {
+      const stripe = await getStripe();
+      const refund = await stripe.refunds.create({
+        payment_intent: payment.transactionId,
+        reason: 'requested_by_customer',
+        metadata: { orderId: order.id, source: 'customer_cancel' },
+      });
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: 'REFUNDED', metadata: { ...(payment.metadata as object ?? {}), refundId: refund.id } },
+      });
+      refundedCents += Math.round((refund.amount ?? 0));
+    } catch (err) {
+      // Refund failed — leave the Payment row alone and surface the
+      // error. The order has NOT been cancelled.
+      const message = err instanceof Error ? err.message : 'Refund failed';
+      res.status(502).json({ success: false, error: `Refund failed: ${message}` });
+      return;
+    }
+  }
+
+  const updated = await prisma.order.update({
+    where: { id: order.id },
+    data: { status: 'CANCELLED' },
+    include: {
+      items: { include: { menuItem: { select: { id: true, name: true, image: true, slug: true } }, options: true } },
+      payments: true,
+    },
+  });
+
+  auditLog(req, {
+    action: 'update',
+    entity: 'Order',
+    entityId: order.id,
+    details: { previousStatus: order.status, newStatus: 'CANCELLED', refundedCents },
+  });
+
+  emitOrderStatusUpdate({
+    id: updated.id,
+    orderNumber: updated.orderNumber,
+    status: updated.status,
+    orderType: updated.orderType,
+    customerId: updated.customerId,
+  });
 
   res.json({ success: true, data: updated });
 }

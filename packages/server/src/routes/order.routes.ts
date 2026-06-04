@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { authenticate, optionalAuth, requireStaff, requireRole } from '../middleware/auth.js';
-import { createOrder, listOrders, listCustomerOrders, getOrder, updateOrderStatus } from '../controllers/order.controller.js';
+import { createOrder, listOrders, listCustomerOrders, getOrder, updateOrderStatus, cancelOrder } from '../controllers/order.controller.js';
 
 const router = Router();
 
@@ -16,6 +16,9 @@ router.get('/', authenticate, requireStaff, listOrders);
 // acts as a bearer token. Needed for guest-checkout confirmation polling
 // — the storefront has no auth header to send post-checkout.
 router.get('/:id', optionalAuth, getOrder);
+// Customer cancel — full refund if still pre-cutoff. Guest-friendly,
+// same bearer-by-cuid model as GET /:id.
+router.post('/:id/cancel', optionalAuth, cancelOrder);
 router.patch('/:id/status', authenticate, requireStaff, updateOrderStatus);
 
 export default router;
