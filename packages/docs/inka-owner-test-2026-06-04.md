@@ -16,7 +16,7 @@ section number + a one-line note (e.g. "3.b — discount didn't show").
 | Admin login | https://inka.kitchenasty.com/admin/login |
 | Admin user | `admin@kitchenasty.com` / `admin123` (please change on first login) |
 | Customer | Register a new account, or use the **Continue as guest** flow at checkout. |
-| Social login | **Google** works. **Microsoft** button is visible but needs the Azure AD app registration before it will land — leave it for now. |
+| Social login | **Google** and **Microsoft** button is visible but needs the Azure AD app registration before it will land — leave it for now. |
 
 ---
 
@@ -117,6 +117,16 @@ Use Stripe test cards:
 4. **No splash on relaunch** — splash is a once-on-first-open thing now.
 5. **Empty states** — pull the wifi mid-load and confirm you see a
    spinner / friendly retry, not a blank screen.
+6. **Cart → location row** — tap the "Pickup / Delivery" row. The sheet
+   should let you toggle Pickup vs Delivery; Delivery collects a free-
+   form address (line 1, optional line 2, postcode, city, state). The
+   chosen address shows back on the cart row.
+7. **Profile → Payment & billing** — should show "Cards are handled by
+   Stripe" plus your real past orders (not the mock card visual). Tap
+   back arrow → should return to the profile screen.
+8. **Guest order history** — place an order as a guest, force-quit the
+   app, reopen → the order should still appear under /history and on
+   Payment & billing receipts. Cached locally on this device only.
 
 ---
 
@@ -129,6 +139,8 @@ Use Stripe test cards:
 - Cookie banner / legal pages (separate task on the Inka TODO list).
 - Driver role + delivery-card download (post-pitch follow-up).
 - Kitchen-display test pass (waiting on owner walkthrough).
+- Mobile geo-fenced delivery preview + "use my current location" GPS
+  auto-fill (matches the website's ZonePreview — backlog).
 
 ---
 
