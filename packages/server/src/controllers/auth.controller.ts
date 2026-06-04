@@ -122,9 +122,37 @@ export async function customerRegister(req: Request, res: Response): Promise<voi
 
   const hashedPassword = await bcrypt.hash(password, 12);
 
+  // Auto-match by email domain so corporate signups land in their
+  // Company + its default Office without a separate step. Non-matched
+  // signups (consumer emails, no Company set up yet) just register
+  // without a company — everything still works.
+  const domain = email.split('@')[1]?.toLowerCase() ?? null;
+  const company = domain
+    ? await prisma.company.findUnique({
+        where: { emailDomain: domain },
+        include: { offices: { where: { isDefault: true }, take: 1 } },
+      })
+    : null;
+  const defaultOffice = company?.offices[0] ?? null;
+
   const customer = await prisma.customer.create({
-    data: { email, password: hashedPassword, name, phone },
-    select: { id: true, email: true, name: true, phone: true },
+    data: {
+      email,
+      password: hashedPassword,
+      name,
+      phone,
+      companyId: company?.id,
+      officeId: defaultOffice?.id,
+    },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      phone: true,
+      role: true,
+      companyId: true,
+      officeId: true,
+    },
   });
 
   const token = generateToken({
@@ -177,6 +205,9 @@ export async function customerLogin(req: Request, res: Response): Promise<void> 
         email: customer.email,
         name: customer.name,
         phone: customer.phone,
+        role: customer.role,
+        companyId: customer.companyId,
+        officeId: customer.officeId,
       },
     },
   });
@@ -201,7 +232,36 @@ export async function getMe(req: Request, res: Response): Promise<void> {
   } else {
     const customer = await prisma.customer.findUnique({
       where: { id: req.user.id },
-      select: { id: true, email: true, name: true, phone: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        role: true,
+        loyaltyPoints: true,
+        preferences: true,
+        companyId: true,
+        officeId: true,
+        company: {
+          select: {
+            id: true,
+            name: true,
+            emailDomain: true,
+            allowancePerWeekdayCents: true,
+          },
+        },
+        office: {
+          select: {
+            id: true,
+            name: true,
+            line1: true,
+            line2: true,
+            city: true,
+            postalCode: true,
+            country: true,
+          },
+        },
+      },
     });
     res.json({ success: true, data: { type: 'customer', customer } });
   }

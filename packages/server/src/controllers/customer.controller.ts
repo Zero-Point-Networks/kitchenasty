@@ -140,6 +140,124 @@ export async function updateAddress(req: Request<{ id: string }>, res: Response)
   res.json({ success: true, data: address });
 }
 
+// ---------- company + office (Inka corporate-lunch model) ----------
+
+const updateCustomerSchema = z
+  .object({
+    name: z.string().min(1).optional(),
+    phone: z.string().optional(),
+    role: z.enum(['EMPLOYEE', 'MANAGER']).optional(),
+    officeId: z.string().nullable().optional(),
+  })
+  .strict();
+
+/// Customer self-update for the bits the app surfaces from Profile:
+/// display name, phone, role flip (the segmented Personal⇄Manager
+/// control), and the active office (when a Company has multiple).
+export async function updateMe(req: Request, res: Response): Promise<void> {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+
+  const parsed = updateCustomerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.errors });
+    return;
+  }
+
+  // Refuse an officeId from a company the customer doesn't belong to —
+  // prevents flipping into someone else's office via a guessed cuid.
+  if (parsed.data.officeId) {
+    const current = await prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { companyId: true },
+    });
+    const office = await prisma.office.findUnique({
+      where: { id: parsed.data.officeId },
+      select: { companyId: true },
+    });
+    if (!office || office.companyId !== current?.companyId) {
+      res.status(403).json({ success: false, error: 'Office not in your company' });
+      return;
+    }
+  }
+
+  const customer = await prisma.customer.update({
+    where: { id: customerId },
+    data: parsed.data,
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      phone: true,
+      role: true,
+      officeId: true,
+      companyId: true,
+    },
+  });
+
+  res.json({ success: true, data: customer });
+}
+
+/// Returns the company the customer matched into (or null), plus its
+/// office list — the team screen + role-select use this.
+export async function getMyCompany(req: Request, res: Response): Promise<void> {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+
+  const customer = await prisma.customer.findUnique({
+    where: { id: customerId },
+    select: {
+      company: {
+        select: {
+          id: true,
+          name: true,
+          emailDomain: true,
+          allowancePerWeekdayCents: true,
+          offices: {
+            orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+          },
+        },
+      },
+    },
+  });
+
+  res.json({ success: true, data: customer?.company ?? null });
+}
+
+/// Manager-only — list members of the requesting user's company so the
+/// Team screen can show "18 of 24 locked in" + per-person status pills.
+export async function listCompanyMembers(req: Request, res: Response): Promise<void> {
+  const customerId = requireCustomer(req, res);
+  if (!customerId) return;
+
+  const me = await prisma.customer.findUnique({
+    where: { id: customerId },
+    select: { companyId: true, role: true },
+  });
+  if (!me?.companyId) {
+    res.status(404).json({ success: false, error: 'No company linked' });
+    return;
+  }
+  if (me.role !== 'MANAGER') {
+    res.status(403).json({ success: false, error: 'Manager only' });
+    return;
+  }
+
+  const members = await prisma.customer.findMany({
+    where: { companyId: me.companyId },
+    orderBy: { name: 'asc' },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      officeId: true,
+    },
+  });
+
+  res.json({ success: true, data: members });
+}
+
 export async function deleteAddress(req: Request<{ id: string }>, res: Response): Promise<void> {
   const customerId = requireCustomer(req, res);
   if (!customerId) return;

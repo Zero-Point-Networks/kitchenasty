@@ -301,9 +301,51 @@ async function main() {
     },
   });
 
+  // -------- demo company: Northwind --------------------------------
+  // Email-domain match means anyone registering with @northwind.co
+  // lands in this Company with the Mercer St office pre-selected.
+  // €8/weekday allowance covers ~1 dish + a side.
+  const northwind = await prisma.company.upsert({
+    where: { emailDomain: 'northwind.co' },
+    update: { name: 'Northwind', allowancePerWeekdayCents: 800 },
+    create: { name: 'Northwind', emailDomain: 'northwind.co', allowancePerWeekdayCents: 800 },
+  });
+
+  // Office upsert — find an existing one to keep customer relations stable.
+  const existingOffice = await prisma.office.findFirst({
+    where: { companyId: northwind.id, name: 'Mercer St' },
+  });
+  const mercerSt = existingOffice
+    ? await prisma.office.update({
+        where: { id: existingOffice.id },
+        data: {
+          name: 'Mercer St',
+          line1: '14 Mercer St',
+          line2: 'Floor 6',
+          city: 'Schwenningen',
+          postalCode: '78054',
+          country: 'DE',
+          isDefault: true,
+        },
+      })
+    : await prisma.office.create({
+        data: {
+          companyId: northwind.id,
+          name: 'Mercer St',
+          line1: '14 Mercer St',
+          line2: 'Floor 6',
+          city: 'Schwenningen',
+          postalCode: '78054',
+          country: 'DE',
+          isDefault: true,
+        },
+      });
+
   console.log('[eatinka] done.');
   console.log(`[eatinka] location: ${location.id} (${location.slug})`);
   console.log(`[eatinka] menu items: ${items.length}, zones: ${zones.length}`);
+  console.log(`[eatinka] company: ${northwind.name} (${northwind.emailDomain}, €${(northwind.allowancePerWeekdayCents/100).toFixed(2)}/day)`);
+  console.log(`[eatinka] office: ${mercerSt.name} at ${mercerSt.line1}, ${mercerSt.city}`);
 }
 
 main()

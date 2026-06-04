@@ -289,7 +289,45 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
 
   const TAX_RATE = 0.08;
   const tax = subtotal * TAX_RATE;
-  const total = subtotal + tax + deliveryFee - loyaltyDiscount;
+
+  // Inka corporate allowance — when the customer's company defines an
+  // allowance per weekday, deduct it day-by-day from each line's
+  // forDate (Sat/Sun pay full price). Caps at the day's subtotal so we
+  // never go negative. Skipped entirely for guests + customers without
+  // a matched company.
+  let companyAllowance = 0;
+  if (customerId) {
+    const me = await prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { company: { select: { allowancePerWeekdayCents: true } } },
+    });
+    const perDayEur = (me?.company?.allowancePerWeekdayCents ?? 0) / 100;
+    if (perDayEur > 0) {
+      // Group line subtotals by ISO date (yyyy-mm-dd) of forDate;
+      // lines without forDate fall back to the order's scheduledAt or
+      // tomorrow so single-day legacy orders still get credit.
+      const fallbackDate = scheduledAt ? new Date(scheduledAt) : (() => {
+        const d = new Date();
+        d.setDate(d.getDate() + 1);
+        return d;
+      })();
+      const fmt = (d: Date) => d.toISOString().slice(0, 10);
+      const dayDow = (k: string) => new Date(k + 'T12:00:00Z').getUTCDay(); // 0 Sun..6 Sat
+
+      const dayTotals = new Map<string, number>();
+      for (const line of orderItemsData) {
+        const dateKey = fmt(line.forDate ?? fallbackDate);
+        dayTotals.set(dateKey, (dayTotals.get(dateKey) ?? 0) + line.subtotal);
+      }
+      for (const [date, dayTotal] of dayTotals) {
+        const dow = dayDow(date);
+        if (dow === 0 || dow === 6) continue; // Sat / Sun — no allowance
+        companyAllowance += Math.min(dayTotal, perDayEur);
+      }
+    }
+  }
+
+  const total = subtotal + tax + deliveryFee - loyaltyDiscount - companyAllowance;
 
   const order = await prisma.order.create({
     data: {
@@ -301,6 +339,7 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
       tax,
       deliveryFee,
       discount: loyaltyDiscount,
+      companyAllowance,
       total,
       comment,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
