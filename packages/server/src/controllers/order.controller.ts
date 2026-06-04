@@ -228,7 +228,18 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
 
   // Calculate totals
   let subtotal = 0;
-  const orderItemsData = items.map((item) => {
+  let orderItemsData: Array<{
+    menuItemId: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    subtotal: number;
+    comment?: string;
+    forDate?: Date;
+    options: { create: Array<{ menuOptionValueId: string; name: string; value: string; priceModifier: number }> };
+  }>;
+  try {
+    orderItemsData = items.map((item) => {
     const menuItem = menuItemMap.get(item.menuItemId)!;
     let unitPrice = menuItem.price;
 
@@ -280,6 +291,10 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
       options: { create: optionsData },
     };
   });
+  } catch (err: any) {
+    res.status(400).json({ success: false, error: err?.message ?? 'Invalid order item' });
+    return;
+  }
 
   // Loyalty points redemption
   let loyaltyDiscount = 0;
