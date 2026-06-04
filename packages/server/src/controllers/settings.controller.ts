@@ -43,6 +43,12 @@ async function getOrCreateSettings() {
 
 // Only the fields required by the public storefront — never include API keys or credentials.
 function toPublicSettings(settings: Awaited<ReturnType<typeof getOrCreateSettings>>) {
+  // Surface the lock-in cutoff so the storefront + mobile app can drive
+  // the countdown banner from real config instead of a hardcoded "9 PM".
+  // Falls back to 21:00 if the admin hasn't set one explicitly.
+  const order = (settings.orderSettings as Record<string, unknown> | null) ?? null;
+  const lockInCutoff = (order?.lockInCutoff as string | undefined) ?? '21:00';
+
   return {
     id: settings.id,
     siteName: settings.siteName,
@@ -56,6 +62,7 @@ function toPublicSettings(settings: Awaited<ReturnType<typeof getOrCreateSetting
     heroSection: settings.heroSection,
     featuresSection: settings.featuresSection,
     ctaSection: settings.ctaSection,
+    lockInCutoff,
     createdAt: settings.createdAt,
     updatedAt: settings.updatedAt,
   };
@@ -189,6 +196,12 @@ const orderSettingsSchema = z.object({
   enableTipping: z.boolean().optional(),
   tipOptions: z.array(z.number()).optional(),
   taxRate: z.number().min(0).max(100).optional(),
+  // Daily lock-in cutoff for the inka next-day flow. Items with a
+  // forDate of D must be placed BEFORE this clock time on D-1. Stored
+  // as a 24h "HH:mm" string (e.g. "21:00") so the admin form can read
+  // and the order controller can split on `:`. Defaults to 21:00 if
+  // unset, which is what the customer copy already shows ("by 9 PM").
+  lockInCutoff: z.string().regex(/^\d{2}:\d{2}$/, 'Expected HH:mm (24h)').optional(),
 });
 
 const reservationSettingsSchema = z.object({

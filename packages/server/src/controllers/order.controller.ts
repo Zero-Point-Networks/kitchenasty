@@ -209,6 +209,23 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     }
   }
 
+  // Lock-in cutoff — items for a forDate D must be placed before this
+  // clock time on D-1 (server-local). Past it, the kitchen has already
+  // started prep for tomorrow and we refuse the line. Defaults to 21:00
+  // when the admin hasn't configured a cutoff.
+  let cutoffHour = 21;
+  let cutoffMinute = 0;
+  {
+    const siteSettings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+    const order = (siteSettings?.orderSettings as Record<string, unknown> | null) ?? null;
+    const raw = (order?.lockInCutoff as string | undefined) ?? '21:00';
+    const m = /^(\d{2}):(\d{2})$/.exec(raw);
+    if (m) {
+      cutoffHour = parseInt(m[1], 10);
+      cutoffMinute = parseInt(m[2], 10);
+    }
+  }
+
   // Calculate totals
   let subtotal = 0;
   const orderItemsData = items.map((item) => {
@@ -228,7 +245,8 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     const itemSubtotal = unitPrice * item.quantity;
     subtotal += itemSubtotal;
 
-    // Validate forDate: YYYY-MM-DD, parsable, no more than 14 days out.
+    // Validate forDate: YYYY-MM-DD, parsable, in the future-ish, no
+    // more than 14 days out, and not past the lock-in cutoff on D-1.
     let forDate: Date | undefined;
     if (item.forDate) {
       const parsed = new Date(item.forDate);
@@ -238,6 +256,15 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
       const maxOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
       if (parsed > maxOut) {
         throw new Error('forDate is more than 14 days out');
+      }
+      // Cutoff: build the deadline (cutoffHour:cutoffMinute on the day
+      // BEFORE forDate, in server-local time) and refuse anything past it.
+      const deadline = new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+      deadline.setDate(deadline.getDate() - 1);
+      deadline.setHours(cutoffHour, cutoffMinute, 0, 0);
+      if (Date.now() > deadline.getTime()) {
+        const hhmm = `${String(cutoffHour).padStart(2, '0')}:${String(cutoffMinute).padStart(2, '0')}`;
+        throw new Error(`Lock-in for ${item.forDate} has passed (cutoff was ${hhmm} the day before)`);
       }
       forDate = parsed;
     }
