@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCart } from '../context/CartContext.js';
+import { defaultForDate, formatDayLabel, upcomingWeekdays, ymd } from '../lib/weekdays.js';
 
 interface OptionValue {
   id: string;
@@ -51,6 +52,7 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selections, setSelections] = useState<Record<string, string[]>>({});
+  const [forDate, setForDate] = useState<string>(() => defaultForDate());
 
   useEffect(() => {
     setLoading(true);
@@ -130,6 +132,7 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
       price: item.price,
       quantity,
       options: cartOptions,
+      forDate,
     });
     onClose();
   }
@@ -200,7 +203,7 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
             <div className="p-6">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <h2 className="text-xl font-bold text-gray-900">{item.name}</h2>
-                <span className="text-xl font-bold text-primary-600">${item.price.toFixed(2)}</span>
+                <span className="text-xl font-bold text-primary-600">€{item.price.toFixed(2)}</span>
               </div>
 
               <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
@@ -290,6 +293,34 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
                 </div>
               )}
 
+              {/* Day picker — lets the customer order across the week in
+                  one go. Defaults to the next weekday. */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                  {t('menu.forWhichDay', 'For which day?')}
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {upcomingWeekdays(5).map((d) => {
+                    const key = ymd(d);
+                    const on = forDate === key;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setForDate(key)}
+                        className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                          on
+                            ? 'bg-primary-600 text-white border-primary-600'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-primary-400'
+                        }`}
+                      >
+                        {formatDayLabel(d)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* Quantity & Add to cart */}
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <div className="flex items-center justify-between">
@@ -312,7 +343,7 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
                     onClick={handleAddToCart}
                     className="bg-primary-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
                   >
-                    {t('menu.addToCart')} &mdash; ${calculateTotal().toFixed(2)}
+                    {t('menu.addToCart')} &mdash; €{calculateTotal().toFixed(2)}
                   </button>
                 </div>
               </div>

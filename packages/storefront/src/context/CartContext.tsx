@@ -18,6 +18,10 @@ export interface CartItem {
   quantity: number;
   options: CartItemOption[];
   comment?: string;
+  // YYYY-MM-DD of the weekday this line is for. Used by the weekly-order
+  // flow — items are grouped by forDate in the cart drawer and checkout.
+  // Optional for back-compat with carts already in localStorage.
+  forDate?: string;
 }
 
 interface CartContextType {

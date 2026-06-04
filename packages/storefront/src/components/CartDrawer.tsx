@@ -1,7 +1,35 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { useCart } from '../context/CartContext.js';
+import { useCart, type CartItem } from '../context/CartContext.js';
+import { formatDayLabelFromYmd } from '../lib/weekdays.js';
+
+const eur = (v: number) =>
+  new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(v);
+
+function lineTotal(item: CartItem): number {
+  const optionsTotal = item.options.reduce((s, o) => s + o.priceModifier, 0);
+  return (item.price + optionsTotal) * item.quantity;
+}
+
+function groupByDay(items: CartItem[]): Array<[string, CartItem[]]> {
+  // Keep insertion order per day so the drawer matches the order picks were
+  // added. Items without forDate (legacy carts in localStorage) bucket into
+  // 'unscheduled' and render last.
+  const buckets = new Map<string, CartItem[]>();
+  for (const item of items) {
+    const key = item.forDate ?? '';
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key)!.push(item);
+  }
+  const entries = Array.from(buckets.entries());
+  entries.sort(([a], [b]) => {
+    if (!a) return 1;
+    if (!b) return -1;
+    return a < b ? -1 : 1;
+  });
+  return entries;
+}
 
 export default function CartDrawer() {
   const { t } = useTranslation();
@@ -11,7 +39,7 @@ export default function CartDrawer() {
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsOpen(false);
     },
-    [setIsOpen]
+    [setIsOpen],
   );
 
   useEffect(() => {
@@ -24,6 +52,8 @@ export default function CartDrawer() {
       document.body.style.overflow = '';
     };
   }, [isOpen, handleKeyDown]);
+
+  const grouped = useMemo(() => groupByDay(items), [items]);
 
   if (!isOpen) return null;
 
@@ -64,47 +94,54 @@ export default function CartDrawer() {
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
-              {items.map((item) => {
-                const optionsTotal = item.options.reduce((s, o) => s + o.priceModifier, 0);
-                const lineTotal = (item.price + optionsTotal) * item.quantity;
+            <div className="space-y-6">
+              {grouped.map(([day, lines]) => {
+                const daySubtotal = lines.reduce((s, l) => s + lineTotal(l), 0);
                 return (
-                  <div key={item.id} className="flex gap-3 pb-4 border-b border-gray-100">
-                    {/* Item info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 text-sm">{item.name}</h3>
-                      {item.options.length > 0 && (
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {item.options.map((o) => o.valueName).join(', ')}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 mt-2">
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50"
-                        >
-                          -
-                        </button>
-                        <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
-                        <button
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50"
-                        >
-                          +
-                        </button>
-                        <button
-                          onClick={() => removeItem(item.id)}
-                          className="ml-2 text-xs text-red-500 hover:text-red-700"
-                        >
-                          {t('cart.remove')}
-                        </button>
-                      </div>
+                  <section key={day || 'unscheduled'}>
+                    <div className="flex items-baseline justify-between mb-3">
+                      <h3 className="text-xs uppercase tracking-wider font-semibold text-gray-500">
+                        {day ? formatDayLabelFromYmd(day) : t('cart.unscheduled', 'Unscheduled')}
+                      </h3>
+                      <span className="text-xs font-medium text-gray-500">{eur(daySubtotal)}</span>
                     </div>
-                    {/* Price */}
-                    <div className="text-sm font-medium text-gray-900">
-                      ${lineTotal.toFixed(2)}
+                    <div className="space-y-4">
+                      {lines.map((item) => (
+                        <div key={item.id} className="flex gap-3 pb-4 border-b border-gray-100">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-gray-900 text-sm">{item.name}</h4>
+                            {item.options.length > 0 && (
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                {item.options.map((o) => o.valueName).join(', ')}
+                              </p>
+                            )}
+                            <div className="flex items-center gap-2 mt-2">
+                              <button
+                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50"
+                              >
+                                -
+                              </button>
+                              <span className="text-sm font-medium w-6 text-center">{item.quantity}</span>
+                              <button
+                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                className="w-6 h-6 flex items-center justify-center border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50"
+                              >
+                                +
+                              </button>
+                              <button
+                                onClick={() => removeItem(item.id)}
+                                className="ml-2 text-xs text-red-500 hover:text-red-700"
+                              >
+                                {t('cart.remove')}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="text-sm font-medium text-gray-900">{eur(lineTotal(item))}</div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  </section>
                 );
               })}
             </div>
@@ -116,7 +153,7 @@ export default function CartDrawer() {
           <div className="border-t border-gray-200 px-6 py-4 space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">{t('cart.subtotal')}</span>
-              <span className="font-semibold text-gray-900">${subtotal.toFixed(2)}</span>
+              <span className="font-semibold text-gray-900">{eur(subtotal)}</span>
             </div>
             <Link
               to="/checkout"

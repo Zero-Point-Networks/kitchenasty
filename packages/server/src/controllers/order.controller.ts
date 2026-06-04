@@ -19,6 +19,10 @@ const orderItemSchema = z.object({
   quantity: z.number().int().min(1),
   comment: z.string().optional(),
   options: z.array(orderItemOptionSchema).optional(),
+  // ISO date (YYYY-MM-DD) of the weekday this line is for. Used by the
+  // storefront's weekly-order flow — missing means the order's
+  // scheduledAt / tomorrow.
+  forDate: z.string().optional(),
 });
 
 const createOrderSchema = z.object({
@@ -224,6 +228,20 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     const itemSubtotal = unitPrice * item.quantity;
     subtotal += itemSubtotal;
 
+    // Validate forDate: YYYY-MM-DD, parsable, no more than 14 days out.
+    let forDate: Date | undefined;
+    if (item.forDate) {
+      const parsed = new Date(item.forDate);
+      if (isNaN(parsed.getTime())) {
+        throw new Error(`Invalid forDate "${item.forDate}"`);
+      }
+      const maxOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      if (parsed > maxOut) {
+        throw new Error('forDate is more than 14 days out');
+      }
+      forDate = parsed;
+    }
+
     return {
       menuItemId: item.menuItemId,
       name: menuItem.name,
@@ -231,6 +249,7 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
       unitPrice,
       subtotal: itemSubtotal,
       comment: item.comment,
+      forDate,
       options: { create: optionsData },
     };
   });

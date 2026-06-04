@@ -117,6 +117,7 @@ export default function Checkout() {
         menuItemId: item.menuItemId,
         quantity: item.quantity,
         comment: item.comment,
+        forDate: item.forDate,
         options: item.options.map((o) => ({
           menuOptionValueId: o.valueId,
           name: o.optionName,
@@ -400,7 +401,7 @@ export default function Checkout() {
               <h2 className="font-display text-2xl text-ink mb-5 leading-tight">Loyalty Points</h2>
               <p className="text-sm text-gray-600 mb-3">
                 You have <span className="font-bold text-primary-600">{loyaltyBalance}</span> points available
-                (100 points = $1.00)
+                (100 points = €1.00)
               </p>
               <div className="flex items-center gap-3">
                 <input
@@ -416,7 +417,7 @@ export default function Checkout() {
                 <span className="text-sm text-gray-600">points to redeem</span>
                 {loyaltyRedeem > 0 && (
                   <span className="text-sm font-medium text-green-600">
-                    -${loyaltyDiscount.toFixed(2)}
+                    -€{loyaltyDiscount.toFixed(2)}
                   </span>
                 )}
               </div>

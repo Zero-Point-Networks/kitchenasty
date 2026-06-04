@@ -412,6 +412,12 @@ model OrderItem {
   subtotal   Float
   comment    String?
 
+  // Delivery date for this line. Nullable for back-compat — a missing
+  // value means "the order's scheduledAt" (or tomorrow for the legacy
+  // single-day flow). Set when the storefront's weekly cart picks a
+  // specific weekday per item.
+  forDate    DateTime?
+
   options OrderItemOption[]
 
   @@map("order_items")
