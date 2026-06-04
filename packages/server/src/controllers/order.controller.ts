@@ -6,6 +6,7 @@ import { isPointInPolygon } from '../lib/geo.js';
 import { isAfterCutoff } from '../lib/cutoff.js';
 import { sendEmail, orderConfirmationEmail, orderStatusEmail } from '../lib/email.js';
 import { auditLog } from '../lib/audit.js';
+import { resolveCoupon, CouponError } from './coupon.controller.js';
 
 const orderItemOptionSchema = z.object({
   menuOptionValueId: z.string().min(1),
@@ -60,7 +61,7 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const { orderType, items, comment, scheduledAt, address, guestName, guestEmail, guestPhone, loyaltyPointsRedeem } = parsed.data;
+  const { orderType, items, comment, scheduledAt, address, guestName, guestEmail, guestPhone, loyaltyPointsRedeem, couponCode } = parsed.data;
 
   if (orderType === 'DELIVERY' && !address) {
     res.status(400).json({ success: false, error: 'Delivery address is required' });
@@ -308,6 +309,29 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     loyaltyDiscount = loyaltyPointsRedeem / 100;
   }
 
+  // Promo code — resolved via the shared coupon helper so the validate
+  // endpoint and createOrder always agree. resolveCoupon throws
+  // CouponError (HTTP-friendly) on bad/expired/used-up codes; we map
+  // that to a 400 inline. FREE_DELIVERY coupons set freeDelivery and
+  // zero the deliveryFee below; everything else returns a flat discount.
+  let couponDiscount = 0;
+  let couponId: string | null = null;
+  let couponZeroesDelivery = false;
+  if (couponCode) {
+    try {
+      const resolved = await resolveCoupon(couponCode, subtotal);
+      couponDiscount = resolved.discount;
+      couponId = resolved.coupon.id;
+      couponZeroesDelivery = resolved.coupon.type === 'FREE_DELIVERY';
+    } catch (err) {
+      if (err instanceof CouponError) {
+        res.status(err.statusCode).json({ success: false, error: err.message });
+        return;
+      }
+      throw err;
+    }
+  }
+
   // Check minimum order for delivery zone
   if (orderType === 'DELIVERY' && address?.lat != null && address?.lng != null) {
     const zones = await prisma.deliveryZone.findMany({
@@ -369,7 +393,14 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     }
   }
 
-  const total = subtotal + tax + deliveryFee - loyaltyDiscount - companyAllowance;
+  // FREE_DELIVERY coupons zero the delivery fee instead of carrying a
+  // discount amount; everything else flows through `discount` together
+  // with the loyalty deduction. Keeping the two in one bucket matches
+  // the existing receipt UI; if we split them later, both signals are
+  // recoverable from couponId + loyaltyPointsRedeem.
+  const effectiveDeliveryFee = couponZeroesDelivery ? 0 : deliveryFee;
+  const discountTotal = loyaltyDiscount + couponDiscount;
+  const total = subtotal + tax + effectiveDeliveryFee - discountTotal - companyAllowance;
 
   const order = await prisma.order.create({
     data: {
@@ -379,12 +410,13 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
       orderType,
       subtotal,
       tax,
-      deliveryFee,
-      discount: loyaltyDiscount,
+      deliveryFee: effectiveDeliveryFee,
+      discount: discountTotal,
       companyAllowance,
       total,
       comment,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      couponId,
       guestName: customerId ? undefined : guestName,
       guestEmail: customerId ? undefined : guestEmail,
       guestPhone: customerId ? undefined : guestPhone,
@@ -442,6 +474,13 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
         },
       });
     }
+  }
+
+  // Increment coupon usage so single-use codes can't be reused. Done
+  // outside the customer-only block above because guest orders count
+  // too.
+  if (couponId) {
+    await prisma.coupon.update({ where: { id: couponId }, data: { usageCount: { increment: 1 } } });
   }
 
   // Send confirmation email

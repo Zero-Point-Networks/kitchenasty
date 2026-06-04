@@ -119,6 +119,48 @@ export async function deleteCoupon(req: Request<{ id: string }>, res: Response):
   res.json({ success: true, message: 'Coupon deleted' });
 }
 
+/// Shared helper used by both the public validate endpoint and the
+/// createOrder pipeline. Returns the resolved coupon row + the EUR
+/// discount it would apply at the given subtotal. Throws a
+/// `CouponError` with the message we'd surface in the 400 response,
+/// so the caller can either return it from the endpoint or convert it
+/// to a thrown validation error during order creation.
+export class CouponError extends Error {
+  readonly statusCode: number;
+  constructor(message: string, statusCode = 400) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+export async function resolveCoupon(rawCode: string, subtotal: number) {
+  const coupon = await prisma.coupon.findUnique({ where: { code: rawCode.toUpperCase() } });
+  if (!coupon) throw new CouponError('Invalid coupon code', 404);
+  if (!coupon.isActive) throw new CouponError('Coupon is not active');
+
+  const now = new Date();
+  if (coupon.startsAt && now < coupon.startsAt) throw new CouponError('Coupon is not yet valid');
+  if (coupon.expiresAt && now > coupon.expiresAt) throw new CouponError('Coupon has expired');
+  if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
+    throw new CouponError('Coupon usage limit reached');
+  }
+  if (subtotal < coupon.minOrder) {
+    throw new CouponError(`Minimum order amount is €${coupon.minOrder.toFixed(2)}`);
+  }
+
+  let discount = 0;
+  if (coupon.type === 'PERCENTAGE') {
+    discount = subtotal * (coupon.value / 100);
+    if (coupon.maxDiscount !== null) discount = Math.min(discount, coupon.maxDiscount);
+  } else if (coupon.type === 'FIXED') {
+    discount = coupon.value;
+  }
+  // FREE_DELIVERY: discount stays 0 here; the order pipeline zeroes the
+  // delivery fee instead so the breakdown reads cleanly.
+
+  return { coupon, discount: Math.round(discount * 100) / 100 };
+}
+
 export async function validateCoupon(req: Request, res: Response): Promise<void> {
   const { code, subtotal } = req.body;
 
@@ -127,49 +169,17 @@ export async function validateCoupon(req: Request, res: Response): Promise<void>
     return;
   }
 
-  const coupon = await prisma.coupon.findUnique({ where: { code: code.toUpperCase() } });
-  if (!coupon) {
-    res.status(404).json({ success: false, error: 'Invalid coupon code' });
-    return;
-  }
-
-  if (!coupon.isActive) {
-    res.status(400).json({ success: false, error: 'Coupon is not active' });
-    return;
-  }
-
-  const now = new Date();
-  if (coupon.startsAt && now < coupon.startsAt) {
-    res.status(400).json({ success: false, error: 'Coupon is not yet valid' });
-    return;
-  }
-  if (coupon.expiresAt && now > coupon.expiresAt) {
-    res.status(400).json({ success: false, error: 'Coupon has expired' });
-    return;
-  }
-
-  if (coupon.usageLimit !== null && coupon.usageCount >= coupon.usageLimit) {
-    res.status(400).json({ success: false, error: 'Coupon usage limit reached' });
-    return;
-  }
-
-  const orderSubtotal = subtotal || 0;
-  if (orderSubtotal < coupon.minOrder) {
-    res.status(400).json({ success: false, error: `Minimum order amount is $${coupon.minOrder.toFixed(2)}` });
-    return;
-  }
-
-  // Calculate discount
-  let discount = 0;
-  if (coupon.type === 'PERCENTAGE') {
-    discount = orderSubtotal * (coupon.value / 100);
-    if (coupon.maxDiscount !== null) {
-      discount = Math.min(discount, coupon.maxDiscount);
+  let resolved;
+  try {
+    resolved = await resolveCoupon(code, subtotal || 0);
+  } catch (err) {
+    if (err instanceof CouponError) {
+      res.status(err.statusCode).json({ success: false, error: err.message });
+      return;
     }
-  } else if (coupon.type === 'FIXED') {
-    discount = coupon.value;
+    throw err;
   }
-  // FREE_DELIVERY discount is applied at checkout level
+  const { coupon, discount } = resolved;
 
   res.json({
     success: true,

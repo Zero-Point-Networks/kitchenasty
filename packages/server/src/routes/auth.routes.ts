@@ -30,11 +30,12 @@ if (process.env.GOOGLE_CLIENT_ID) {
   );
 }
 
-// Social login — Facebook
-if (process.env.FACEBOOK_APP_ID) {
-  router.get('/facebook', passport.authenticate('facebook', { scope: ['email'], session: false }));
-  router.get('/facebook/callback',
-    passport.authenticate('facebook', { session: false, failureRedirect: '/login' }),
+// Social login — Microsoft (Entra ID). Replaces the prior Facebook
+// integration per the Inka social-login policy.
+if (process.env.MICROSOFT_CLIENT_ID) {
+  router.get('/microsoft', passport.authenticate('microsoft', { session: false }));
+  router.get('/microsoft/callback',
+    passport.authenticate('microsoft', { session: false, failureRedirect: '/login' }),
     handleSocialCallback
   );
 }
