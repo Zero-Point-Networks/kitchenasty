@@ -52,7 +52,11 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [selections, setSelections] = useState<Record<string, string[]>>({});
-  const [forDate, setForDate] = useState<string>(() => defaultForDate());
+  // Multi-select day picker. The customer can pick the same dish for any
+  // combination of weekdays in one go — the Add-to-cart action fans the
+  // selection out into one cart line per picked day. Defaults to the
+  // next single weekday so the modal isn't empty on open.
+  const [forDates, setForDates] = useState<string[]>(() => [defaultForDate()]);
 
   useEffect(() => {
     setLoading(true);
@@ -113,7 +117,7 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
   }
 
   function handleAddToCart() {
-    if (!item) return;
+    if (!item || forDates.length === 0) return;
     const cartOptions = item.options.flatMap((opt) => {
       const selected = selections[opt.id] || [];
       return opt.values
@@ -126,14 +130,19 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
           priceModifier: v.priceModifier,
         }));
     });
-    addItem({
-      menuItemId: item.id,
-      name: item.name,
-      price: item.price,
-      quantity,
-      options: cartOptions,
-      forDate,
-    });
+    // One cart line per picked day. Each line carries the same quantity
+    // + options + price; only forDate differs. The cart drawer then
+    // groups them by day.
+    for (const forDate of forDates) {
+      addItem({
+        menuItemId: item.id,
+        name: item.name,
+        price: item.price,
+        quantity,
+        options: cartOptions,
+        forDate,
+      });
+    }
     onClose();
   }
 
@@ -148,7 +157,9 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
         }
       }
     }
-    return total * quantity;
+    // Multiply by quantity AND by the number of picked days, so the
+    // button shows the actual amount we'll add to the cart.
+    return total * quantity * Math.max(forDates.length, 1);
   }
 
   return (
@@ -293,21 +304,41 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
                 </div>
               )}
 
-              {/* Day picker — lets the customer order across the week in
-                  one go. Defaults to the next weekday. */}
+              {/* Day picker — pick the same dish for any combination of
+                  weekdays in one go. Each picked day becomes its own cart
+                  line. "All week" is the corporate-lunch hot path. */}
               <div className="mt-6 pt-4 border-t border-gray-200">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                  {t('menu.forWhichDay', 'For which day?')}
-                </h3>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {t('menu.forWhichDays', 'For which days?')}
+                  </h3>
+                  {(() => {
+                    const all = upcomingWeekdays(5).map(ymd);
+                    const allOn = all.every((d) => forDates.includes(d));
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => setForDates(allOn ? [] : all)}
+                        className="text-xs font-medium text-primary-600 hover:text-primary-700"
+                      >
+                        {allOn ? t('menu.clearAll', 'Clear all') : t('menu.allWeek', 'All week')}
+                      </button>
+                    );
+                  })()}
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {upcomingWeekdays(5).map((d) => {
                     const key = ymd(d);
-                    const on = forDate === key;
+                    const on = forDates.includes(key);
                     return (
                       <button
                         key={key}
                         type="button"
-                        onClick={() => setForDate(key)}
+                        onClick={() =>
+                          setForDates((prev) =>
+                            prev.includes(key) ? prev.filter((x) => x !== key) : [...prev, key],
+                          )
+                        }
                         className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
                           on
                             ? 'bg-primary-600 text-white border-primary-600'
@@ -319,6 +350,11 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
                     );
                   })}
                 </div>
+                {forDates.length === 0 && (
+                  <p className="mt-2 text-xs text-amber-700">
+                    {t('menu.pickAtLeastOneDay', 'Pick at least one day.')}
+                  </p>
+                )}
               </div>
 
               {/* Quantity & Add to cart */}
@@ -341,7 +377,8 @@ export default function MenuItemModal({ itemId, onClose }: Props) {
                   </div>
                   <button
                     onClick={handleAddToCart}
-                    className="bg-primary-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+                    disabled={forDates.length === 0}
+                    className="bg-primary-600 text-white px-6 py-2.5 rounded-lg font-semibold hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-600"
                   >
                     {t('menu.addToCart')} &mdash; €{calculateTotal().toFixed(2)}
                   </button>

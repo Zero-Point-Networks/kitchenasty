@@ -16,6 +16,12 @@ export default function Checkout() {
   const { user, token } = useAuth();
   const navigate = useNavigate();
 
+  // When the cart already carries per-item delivery dates (the multi-day
+  // flow from MenuItemModal), we hide the legacy single-day scheduling
+  // section in checkout — picking a date there would conflict with the
+  // per-item forDates already on each line. Same for delivery and pickup.
+  const hasPerItemDates = items.some((i) => !!i.forDate);
+
   const [orderType, setOrderType] = useState<OrderType>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [address, setAddress] = useState({ line1: '', line2: '', city: '', state: '', zip: '' });
@@ -131,7 +137,9 @@ export default function Checkout() {
         paymentMethod,
         items: orderItems,
         comment: comment || undefined,
-        scheduledAt: scheduledAt || undefined,
+        // Don't send a single scheduledAt when items carry per-day forDates —
+        // each OrderItem drives its own delivery day in the multi-day flow.
+        scheduledAt: hasPerItemDates ? undefined : scheduledAt || undefined,
         couponCode: couponCode || undefined,
       };
 
@@ -315,7 +323,11 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* Schedule — the reservation card. Day chips left, time hint right. */}
+          {/* Schedule — the reservation card. Day chips left, time hint right.
+              Hidden entirely when the cart already carries per-item forDates
+              (the multi-day flow). Each OrderItem then drives its own delivery
+              day; a single scheduledAt would conflict with the spread. */}
+          {!hasPerItemDates && (
           <div className="relative border-2 border-ink bg-paper-50 p-6 lg:p-7">
             <span className="absolute -top-2.5 left-5 bg-paper-50 px-2 eyebrow text-saffron">ii · The Slot</span>
             <h2 className="font-display text-2xl text-ink mb-1 leading-tight">
@@ -364,6 +376,7 @@ export default function Checkout() {
               </div>
             )}
           </div>
+          )}
 
           {/* Notes */}
           <div className="relative border border-tobacco/40 bg-paper-50 p-6 lg:p-7">
