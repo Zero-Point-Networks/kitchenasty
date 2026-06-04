@@ -130,6 +130,53 @@ Use Stripe test cards:
 
 ---
 
+## 9. Cancel an order (mobile + web)
+
+Cancellation is supported for any order that's still pre-cutoff (i.e.
+all its lines' lock-in hasn't passed yet). Stripe refunds the full
+amount on success.
+
+1. Place a test order (Stripe `4242 4242 4242 4242` to get past
+   PaymentSheet).
+2. Open the confirmed order → "Cancel order" button at the bottom.
+3. Confirm → the status flips to **CANCELLED** within a second; the
+   refund shows up in the Stripe Dashboard test data.
+4. Try cancelling AFTER the 9 PM cutoff for tomorrow's lunch — the
+   button should respond with a friendly "Lock-in for this order has
+   passed" message. (Post-cutoff cancel with a small non-refundable
+   fee is on the post-freeze roadmap.)
+
+## 10. Mobile delivery zone preview + GPS
+
+On Cart → tap the "Pickup / Delivery" row → switch to Delivery tab.
+
+1. **Type the address** — once line 1 + postcode + city are filled,
+   the sheet runs an OSM geocode, tests the point against the live
+   delivery polygons, and shows a green stamp with the zone name +
+   fee + min order + ETA. Outside the zones it shows a red warning
+   and blocks Save.
+2. **"Use my current location"** — tap the button, allow the location
+   permission, the form pre-fills + the zone is checked against the
+   GPS coordinates directly.
+3. Schwenningen Mitte is free delivery (€12 min). Outer zones add
+   delivery fees up to €3.50 (€25 min).
+
+## 11. Plan = real this-week view
+
+Plan tab now reflects your actual orders + cart, not the design-time
+"Weekday Regular" mock.
+
+1. Add a dish for, say, Wednesday in the cart → Plan shows it on Wed
+   with an **In cart** pill and a banner up top counting cart items.
+2. Lock that order in → the pill goes away and Wed shows as locked.
+3. After 9 PM the matching day shows **Closed · Lock-in passed** and
+   the row doesn't navigate to the menu (it goes to Cart so you can
+   still remove if needed).
+4. Tap an open day's "Add lunch" → menu opens pre-scoped to that day,
+   so your dish detail picker starts on Wed instead of tomorrow.
+
+---
+
 ## What's intentionally not in this freeze
 
 - Microsoft sign-in (Azure AD app registration is the gating item; the
@@ -139,8 +186,11 @@ Use Stripe test cards:
 - Cookie banner / legal pages (separate task on the Inka TODO list).
 - Driver role + delivery-card download (post-pitch follow-up).
 - Kitchen-display test pass (waiting on owner walkthrough).
-- Mobile geo-fenced delivery preview + "use my current location" GPS
-  auto-fill (matches the website's ZonePreview — backlog).
+- Post-lock-in order cancellation with a small fee (we have the
+  pre-lock-in full-refund path live; the partial-refund variant is on
+  the roadmap).
+- Team / manager mode (no server role yet — the design mock is gone
+  but the /team page is still reachable as a preview-only).
 
 ---
 
