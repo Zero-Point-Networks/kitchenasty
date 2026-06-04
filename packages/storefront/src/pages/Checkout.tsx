@@ -28,6 +28,13 @@ export default function Checkout() {
   const [scheduledAt, setScheduledAt] = useState('');
   const [comment, setComment] = useState('');
   const [couponCode, setCouponCode] = useState('');
+  // Validated-coupon state. Server is the source of truth so we re-validate
+  // before sending the order; until then we show the customer the discount
+  // they're about to get applied.
+  const [couponDiscount, setCouponDiscount] = useState(0);
+  const [couponFreeDelivery, setCouponFreeDelivery] = useState(false);
+  const [couponError, setCouponError] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -57,8 +64,51 @@ export default function Checkout() {
   const loyaltyDiscount = loyaltyRedeem / 100;
 
   const tax = subtotal * TAX_RATE;
-  const currentDeliveryFee = orderType === 'delivery' ? deliveryFee : 0;
-  const total = subtotal + tax + currentDeliveryFee - loyaltyDiscount;
+  const baseDeliveryFee = orderType === 'delivery' ? deliveryFee : 0;
+  // A FREE_DELIVERY coupon zeroes the delivery fee instead of carrying a
+  // discount amount — the server applies the same rule when it computes
+  // the canonical total.
+  const currentDeliveryFee = couponFreeDelivery ? 0 : baseDeliveryFee;
+  const total = subtotal + tax + currentDeliveryFee - loyaltyDiscount - couponDiscount;
+
+  async function applyCoupon() {
+    if (!couponCode.trim()) {
+      setCouponError('Enter a code first.');
+      return;
+    }
+    setCouponBusy(true);
+    setCouponError('');
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode.trim(), subtotal }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setCouponDiscount(0);
+        setCouponFreeDelivery(false);
+        setCouponError(data.error || 'Could not validate coupon');
+        return;
+      }
+      setCouponDiscount(Number(data.data.discount) || 0);
+      setCouponFreeDelivery(!!data.data.freeDelivery);
+      setCouponError('');
+    } catch (e: any) {
+      setCouponError(e?.message || 'Network error');
+      setCouponDiscount(0);
+      setCouponFreeDelivery(false);
+    } finally {
+      setCouponBusy(false);
+    }
+  }
+
+  function clearCoupon() {
+    setCouponCode('');
+    setCouponDiscount(0);
+    setCouponFreeDelivery(false);
+    setCouponError('');
+  }
 
   // Check busy mode and next-day cutoff config on mount
   useEffect(() => {
@@ -396,16 +446,40 @@ export default function Checkout() {
               <input
                 type="text"
                 value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                className="flex-1 bg-transparent border-0 border-b border-ink/30 focus:border-saffron outline-none px-0 py-2 font-ui text-sm placeholder:text-ink-mute"
+                onChange={(e) => { setCouponCode(e.target.value.toUpperCase()); setCouponError(''); }}
+                placeholder="PROMO20"
+                className="flex-1 bg-transparent border-0 border-b border-ink/30 focus:border-saffron outline-none px-0 py-2 font-ui text-sm placeholder:text-ink-mute uppercase"
+                disabled={couponBusy || couponDiscount > 0 || couponFreeDelivery}
               />
-              <button
-                type="button"
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                {t('checkout.apply')}
-              </button>
+              {(couponDiscount > 0 || couponFreeDelivery) ? (
+                <button
+                  type="button"
+                  onClick={clearCoupon}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Clear
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={applyCoupon}
+                  disabled={couponBusy || !couponCode.trim()}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {couponBusy ? 'Checking…' : t('checkout.apply')}
+                </button>
+              )}
             </div>
+            {couponError && (
+              <p className="mt-2 text-sm text-red-600">{couponError}</p>
+            )}
+            {(couponDiscount > 0 || couponFreeDelivery) && !couponError && (
+              <p className="mt-2 text-sm text-green-700">
+                {couponFreeDelivery
+                  ? `Free delivery applied`
+                  : `−€${couponDiscount.toFixed(2)} applied`}
+              </p>
+            )}
           </div>
 
           {/* Loyalty Points Redemption */}
@@ -568,6 +642,12 @@ export default function Checkout() {
               )}
               {loyaltyDiscount > 0 && (
                 <Row label="Loyalty Discount" value={`-€${loyaltyDiscount.toFixed(2)}`} accent />
+              )}
+              {couponDiscount > 0 && (
+                <Row label={`Coupon ${couponCode}`} value={`-€${couponDiscount.toFixed(2)}`} accent />
+              )}
+              {couponFreeDelivery && couponDiscount === 0 && (
+                <Row label={`Coupon ${couponCode}`} value="Free delivery" accent />
               )}
             </div>
 

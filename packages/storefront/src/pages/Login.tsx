@@ -90,13 +90,25 @@ export default function Login() {
               href="/api/auth/google"
               className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+                <path fill="#4285F4" d="M22.5 12.27c0-.79-.07-1.55-.2-2.27H12v4.3h5.92a5.07 5.07 0 0 1-2.2 3.32v2.76h3.56c2.08-1.92 3.28-4.74 3.28-8.11z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.99 7.28-2.66l-3.56-2.76c-.98.66-2.24 1.06-3.72 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.11A6.6 6.6 0 0 1 5.5 12c0-.74.12-1.45.34-2.11V7.05H2.18A11 11 0 0 0 1 12c0 1.78.42 3.46 1.18 4.95l3.66-2.84z"/>
+                <path fill="#EA4335" d="M12 5.42c1.62 0 3.07.56 4.21 1.65l3.16-3.16C17.45 2.1 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84C6.71 7.35 9.14 5.42 12 5.42z"/>
+              </svg>
               Google
             </a>
             <a
-              href="/api/auth/facebook"
+              href="/api/auth/microsoft"
               className="flex-1 flex items-center justify-center gap-2 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Facebook
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden>
+                <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
+                <rect x="13" y="1" width="10" height="10" fill="#7FBA00"/>
+                <rect x="1" y="13" width="10" height="10" fill="#00A4EF"/>
+                <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
+              </svg>
+              Microsoft
             </a>
           </div>
 
