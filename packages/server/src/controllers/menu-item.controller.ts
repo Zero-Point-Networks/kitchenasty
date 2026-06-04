@@ -46,14 +46,40 @@ export async function listMenuItems(req: Request, res: Response): Promise<void> 
   const skip = (page - 1) * limit;
   const categoryId = req.query.categoryId as string | undefined;
   const search = req.query.search as string | undefined;
+  const dateParam = req.query.date as string | undefined;
   // Public/customer requests never see deactivated items. Staff can pass
   // `includeInactive=true` to manage the full catalog from the admin.
   const includeInactive = req.query.includeInactive === 'true' && Boolean((req as any).user?.role);
+
+  // `?date=YYYY-MM-DD` filters the catalog to what's on the kitchen's
+  // publication for that day. When a publication exists, return only
+  // its items; when none, return an empty list — the storefront should
+  // surface a "menu not yet published" state instead of a stale lineup.
+  let publicationItemIds: string[] | null = null;
+  if (dateParam) {
+    const parsed = new Date(dateParam);
+    if (isNaN(parsed.getTime())) {
+      res.status(400).json({ success: false, error: 'Invalid date format (expected YYYY-MM-DD)' });
+      return;
+    }
+    // Normalise to UTC midnight so the unique-by-date lookup matches.
+    parsed.setUTCHours(0, 0, 0, 0);
+    const publication = await prisma.menuPublication.findUnique({
+      where: { date: parsed },
+      include: { items: { select: { menuItemId: true } } },
+    });
+    if (!publication) {
+      res.json({ success: true, data: [], pagination: { page, limit, total: 0, totalPages: 0 } });
+      return;
+    }
+    publicationItemIds = publication.items.map((i) => i.menuItemId);
+  }
 
   const where: Record<string, unknown> = {};
   if (!includeInactive) where.isActive = true;
   if (categoryId) where.categoryId = categoryId;
   if (search) where.name = { contains: search, mode: 'insensitive' };
+  if (publicationItemIds) where.id = { in: publicationItemIds };
 
   const [items, total] = await Promise.all([
     prisma.menuItem.findMany({

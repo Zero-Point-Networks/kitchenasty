@@ -27,6 +27,12 @@ import {
   updateMealtime,
   deleteMealtime,
 } from '../controllers/mealtime.controller.js';
+import {
+  listPublications,
+  getPublication,
+  upsertPublication,
+  deletePublication,
+} from '../controllers/menu-publication.controller.js';
 import { authenticate, requireStaff, requireRole } from '../middleware/auth.js';
 
 const router = Router();
@@ -51,6 +57,14 @@ router.delete('/items/:id/image', authenticate, requireStaff, requireRole('SUPER
 router.get('/allergens', listAllergens);
 router.post('/allergens', authenticate, requireStaff, requireRole('SUPER_ADMIN', 'MANAGER'), createAllergen);
 router.delete('/allergens/:id', authenticate, requireStaff, requireRole('SUPER_ADMIN'), deleteAllergen);
+
+// Daily menu publications — kitchen curates which items are on offer
+// for a given weekday. Read is open so the storefront can fetch it
+// without auth; create / update / delete require Manager+.
+router.get('/publications', listPublications);
+router.get('/publications/:id', getPublication);
+router.post('/publications', authenticate, requireStaff, requireRole('SUPER_ADMIN', 'MANAGER'), upsertPublication);
+router.delete('/publications/:id', authenticate, requireStaff, requireRole('SUPER_ADMIN', 'MANAGER'), deletePublication);
 
 // Mealtimes - read is open, write requires Manager+
 router.get('/mealtimes', listMealtimes);

@@ -305,8 +305,37 @@ model MenuItem {
   mealtimes  MenuItemMealtime[]
   allergens  MenuItemAllergen[]
   orderItems OrderItem[]
+  publications MenuPublicationItem[]
 
   @@map("menu_items")
+}
+
+// Daily-curated menu — what's on the kitchen's lineup for a given date.
+// `date` is unique so we always have at most one publication per day;
+// re-publishing is an upsert that swaps the items.
+model MenuPublication {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  notes       String?
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       MenuPublicationItem[]
+
+  @@unique([date])
+  @@map("menu_publications")
+}
+
+model MenuPublicationItem {
+  publicationId String
+  publication   MenuPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  menuItemId    String
+  menuItem      MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  sortOrder     Int @default(0)
+
+  @@id([publicationId, menuItemId])
+  @@map("menu_publication_items")
 }
 
 model MenuOption {

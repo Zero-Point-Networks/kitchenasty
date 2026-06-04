@@ -341,6 +341,54 @@ async function main() {
         },
       });
 
+  // -------- daily menu publications -------------------------------
+  // Publish a rotating lineup for the next five weekdays so the demo
+  // shows day-to-day variety. We use ~7 items per day rotating across
+  // the available 12 so each weekday has a slightly different slate.
+  const allItemIds = items.map((it) => it.id);
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const upcomingWeekdays: Date[] = [];
+  {
+    const cursor = new Date(today);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    while (upcomingWeekdays.length < 5) {
+      const dow = cursor.getUTCDay();
+      if (dow !== 0 && dow !== 6) upcomingWeekdays.push(new Date(cursor));
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+  }
+  const perDay = Math.min(7, allItemIds.length);
+  for (let i = 0; i < upcomingWeekdays.length; i++) {
+    const date = upcomingWeekdays[i];
+    // Rotate the slice so each day has a different "first item" — a cheap
+    // way to vary the lineup without authoring a daily list by hand.
+    const offset = (i * 2) % allItemIds.length;
+    const slice: string[] = [];
+    for (let j = 0; j < perDay; j++) {
+      slice.push(allItemIds[(offset + j) % allItemIds.length]);
+    }
+    const existing = await prisma.menuPublication.findUnique({ where: { date } });
+    const pub = existing
+      ? await prisma.menuPublication.update({
+          where: { id: existing.id },
+          data: {
+            publishedAt: new Date(),
+            items: {
+              deleteMany: {},
+              create: slice.map((menuItemId, idx) => ({ menuItemId, sortOrder: idx })),
+            },
+          },
+        })
+      : await prisma.menuPublication.create({
+          data: {
+            date,
+            items: { create: slice.map((menuItemId, idx) => ({ menuItemId, sortOrder: idx })) },
+          },
+        });
+    console.log(`[eatinka] published ${date.toISOString().slice(0, 10)}: ${slice.length} items (${pub.id.slice(0, 8)})`);
+  }
+
   console.log('[eatinka] done.');
   console.log(`[eatinka] location: ${location.id} (${location.slug})`);
   console.log(`[eatinka] menu items: ${items.length}, zones: ${zones.length}`);
