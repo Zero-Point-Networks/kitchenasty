@@ -12,6 +12,7 @@ import orderRoutes from './routes/order.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import reservationRoutes from './routes/reservation.routes.js';
 import couponRoutes from './routes/coupon.routes.js';
+import customerRoutes from './routes/customer.routes.js';
 import reviewRoutes from './routes/review.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import automationRoutes from './routes/automation.routes.js';
@@ -112,6 +113,7 @@ export function createApp() {
   app.use('/api/payments', paymentRoutes);
   app.use('/api/reservations', reservationRoutes);
   app.use('/api/coupons', couponRoutes);
+  app.use('/api/customers', customerRoutes);
   app.use('/api/reviews', reviewRoutes);
   app.use('/api/dashboard', dashboardRoutes);
   app.use('/api/automation-rules', automationRoutes);

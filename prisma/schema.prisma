@@ -51,6 +51,11 @@ model Customer {
   phone          String?
   isGuest        Boolean  @default(false)
   expoPushToken  String?
+  // Free-form preferences captured at onboarding + editable later.
+  // Expected shape today (kept loose so we can evolve client-side
+  // without a migration each time):
+  //   { diet: string[], avoidAllergenIds: string[], spice: "mild"|"medium"|"hot" }
+  preferences    Json?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
