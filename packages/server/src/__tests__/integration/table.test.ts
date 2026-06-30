@@ -243,4 +243,83 @@ describe('Table API - Integration Tests', () => {
       expect(res.body.message).toBe('Table deleted');
     });
   });
+
+  // ============================================================
+  // QR TOKEN RESOLUTION (public, dine-in entry point)
+  // ============================================================
+  describe('GET /api/locations/tables/by-token/:qrToken', () => {
+    it('resolves an active table to its location + table identity (no auth)', async () => {
+      mockedPrisma.table.findFirst.mockResolvedValue({
+        ...sampleTable,
+        qrToken: 'tok-valid',
+        location: sampleLocation,
+      } as any);
+
+      const res = await request(app).get('/api/locations/tables/by-token/tok-valid');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({
+        locationId: 'loc-1',
+        locationName: 'Downtown Kitchen',
+        tableId: 'tbl-1',
+        tableName: 'Table 1',
+      });
+    });
+
+    it('returns 404 for an unknown or inactive token', async () => {
+      mockedPrisma.table.findFirst.mockResolvedValue(null);
+
+      const res = await request(app).get('/api/locations/tables/by-token/tok-bogus');
+      expect(res.status).toBe(404);
+    });
+  });
+
+  // ============================================================
+  // QR TOKEN GENERATION (staff)
+  // ============================================================
+  describe('POST /api/locations/:locationId/tables/:tableId/qr', () => {
+    beforeEach(() => {
+      process.env.PUBLIC_URL = 'https://shop.example.com';
+    });
+
+    it('generates a qrToken and returns the storefront URL', async () => {
+      mockedPrisma.table.findFirst.mockResolvedValue({ ...sampleTable, qrToken: null } as any);
+      mockedPrisma.table.update.mockImplementation(async (args: any) => ({ ...sampleTable, ...args.data }));
+
+      const res = await request(app)
+        .post('/api/locations/loc-1/tables/tbl-1/qr')
+        .set('Authorization', `Bearer ${managerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.qrToken).toBeTruthy();
+      expect(res.body.data.url).toBe(`https://shop.example.com/t/${res.body.data.qrToken}`);
+    });
+
+    it('rotates an existing token to a new value', async () => {
+      mockedPrisma.table.findFirst.mockResolvedValue({ ...sampleTable, qrToken: 'old-token' } as any);
+      mockedPrisma.table.update.mockImplementation(async (args: any) => ({ ...sampleTable, ...args.data }));
+
+      const res = await request(app)
+        .post('/api/locations/loc-1/tables/tbl-1/qr')
+        .set('Authorization', `Bearer ${managerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.qrToken).not.toBe('old-token');
+    });
+
+    it('requires staff authentication', async () => {
+      const res = await request(app).post('/api/locations/loc-1/tables/tbl-1/qr');
+      expect(res.status).toBe(401);
+    });
+
+    it('returns 404 when the table does not exist at the location', async () => {
+      mockedPrisma.table.findFirst.mockResolvedValue(null);
+
+      const res = await request(app)
+        .post('/api/locations/loc-1/tables/missing/qr')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+  });
 });

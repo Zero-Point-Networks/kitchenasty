@@ -108,12 +108,17 @@ No new context module is created; `CartContext.tsx` is modified.
 
 > **Session notes**: Schema edits in `prisma/schema.prisma` — `OrderType.DINE_IN`, `Order.tableId` + `table` relation, `Table.qrToken @unique` + `orders` relation, `orderSettings` comment. `dineInEnabled: z.boolean().optional()` added to `orderSettingsSchema` (`settings.controller.ts:191`). Migration `prisma/migrations/20260630083351_add_qr_dine_in_ordering/migration.sql` generated via `prisma migrate diff` (datamodel-to-datamodel; no DB in env) — fully additive: `ADD VALUE 'DINE_IN'`, two nullable columns, one unique index, one `ON DELETE SET NULL` FK. `prisma validate` passes; client regenerated. No DB available to run `migrate dev`, so the migration is unapplied — it will apply on first `prisma migrate deploy`/`dev` in a real env.
 
-### Phase 2: Server — tokens & dine-in orders
+### Phase 2: Server — tokens & dine-in orders ✅
 <!-- depends: Schema & contracts | packages: server -->
 
-- [ ] **T2.1** `GET /api/locations/tables/by-token/:qrToken` resolver in `table.controller.ts` + route `[server]` `[~35 LOC]` — depends: T1.1
-- [ ] **T2.2** `POST /api/locations/:locationId/tables/:tableId/qr` to set/rotate `qrToken`, returns storefront URL `[server]` `[~30 LOC]` — depends: T1.1
-- [ ] **T2.3** Accept `DINE_IN` + `tableToken` in `createOrderSchema`; branch out of address/zone logic; set `tableId` `[server]` `[~50 LOC]` — depends: T1.1
+- [x] **T2.1** `GET /api/locations/tables/by-token/:qrToken` resolver in `table.controller.ts` + route `[server]` `[~35 LOC]` — depends: T1.1
+- [x] **T2.2** `POST /api/locations/:locationId/tables/:tableId/qr` to set/rotate `qrToken`, returns storefront URL `[server]` `[~30 LOC]` — depends: T1.1
+- [x] **T2.3** Accept `DINE_IN` + `tableToken` in `createOrderSchema`; branch out of address/zone logic; set `tableId` `[server]` `[~50 LOC]` — depends: T1.1
+
+> **Session notes**: New `packages/server/src/lib/qr.ts` (`generateQrToken` = 18 random bytes base64url; `tableQrUrl` from `PUBLIC_URL`). `table.controller.ts` gained `resolveTableByToken` (public, returns location+table labels) and `generateTableQr` (staff, sets/rotates `qrToken`, returns scannable URL). Routes added in `location.routes.ts` — public `/tables/by-token/:qrToken` registered **before** the parameterised `/:locationId/tables/...` group to avoid shadowing; QR-generate gated by `SUPER_ADMIN`/`MANAGER`. `order.controller.ts`: `createOrderSchema` accepts `DINE_IN` + optional `tableToken`; dine-in is exempt from the guest name/email requirement (anonymous walk-in); table resolved (active + same location) and `tableId` persisted. **TDD**: tests written first (Red confirmed), then implementation. Unit `qr-token.test.ts` (5), dine-in cases in `order.test.ts` (+3), QR cases in `table.test.ts` (+6). Full server suite green: **339 tests pass**. Type-check clean. (Lint not runnable — eslint absent from the repo, pre-existing.) This satisfies T5.1 (server integration tests for dine-in + token resolution).
+
+### Phase 5 note
+> T5.1 (server integration tests for dine-in order creation + token resolution) was completed as part of Phase 2's TDD cycle — see the Phase 2 session notes. Marked complete below.
 
 ### Phase 3: Admin — QR management
 <!-- depends: Server — tokens & dine-in orders | packages: admin -->
@@ -131,7 +136,7 @@ No new context module is created; `CartContext.tsx` is modified.
 ### Phase 5: Tests & docs
 <!-- depends: Storefront — scan-to-order flow | packages: server, storefront, docs -->
 
-- [ ] **T5.1** Integration tests for dine-in order creation + token resolution `[server]` `[~80 LOC]` — depends: T2.3
+- [x] **T5.1** Integration tests for dine-in order creation + token resolution `[server]` `[~80 LOC]` — depends: T2.3 (done in Phase 2 TDD)
 - [ ] **T5.2** E2E: scan-link → menu → dine-in checkout (pay-at-counter) in `e2e/storefront/dine-in.spec.ts` (**NEW**) `[storefront]` `[~60 LOC]` — depends: T4.3
 - [ ] **T5.3** Docs: QR ordering setup + table QR printing `[docs]` `[~30 LOC]` — depends: T3.2, T4.3
 

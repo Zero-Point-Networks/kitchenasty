@@ -310,4 +310,57 @@ describe('Order API - Integration Tests', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  // ============================================================
+  // DINE-IN (QR ordering)
+  // ============================================================
+  describe('POST /api/orders - dine-in', () => {
+    const activeTable = { id: 'table-1', locationId: 'loc-1', name: 'Table 4', isActive: true, qrToken: 'tok-valid' };
+
+    it('creates a DINE_IN order from a valid table token, no address or guest contact required', async () => {
+      mockedPrisma.menuItem.findMany.mockResolvedValue([sampleMenuItem] as any);
+      mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      mockedPrisma.table.findFirst.mockResolvedValue(activeTable as any);
+      mockedPrisma.order.create.mockResolvedValue({ ...sampleOrder, orderType: 'DINE_IN', tableId: 'table-1' } as any);
+      mockedPrisma.automationRule.findMany.mockResolvedValue([]);
+
+      const res = await request(app).post('/api/orders').send({
+        orderType: 'DINE_IN',
+        items: [{ menuItemId: 'item-1', quantity: 2 }],
+        tableToken: 'tok-valid',
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.orderType).toBe('DINE_IN');
+      expect(res.body.data.tableId).toBe('table-1');
+      // the resolved table id must be persisted on the order
+      expect(mockedPrisma.order.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ tableId: 'table-1', orderType: 'DINE_IN' }) }),
+      );
+    });
+
+    it('rejects a DINE_IN order with no table token', async () => {
+      const res = await request(app).post('/api/orders').send({
+        orderType: 'DINE_IN',
+        items: [{ menuItemId: 'item-1', quantity: 1 }],
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('table');
+    });
+
+    it('rejects a DINE_IN order with an unknown or inactive table token', async () => {
+      mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      mockedPrisma.table.findFirst.mockResolvedValue(null);
+
+      const res = await request(app).post('/api/orders').send({
+        orderType: 'DINE_IN',
+        items: [{ menuItemId: 'item-1', quantity: 1 }],
+        tableToken: 'tok-bogus',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('table');
+    });
+  });
 });

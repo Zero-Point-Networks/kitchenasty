@@ -21,7 +21,8 @@ const orderItemSchema = z.object({
 });
 
 const createOrderSchema = z.object({
-  orderType: z.enum(['DELIVERY', 'PICKUP']),
+  orderType: z.enum(['DELIVERY', 'PICKUP', 'DINE_IN']),
+  tableToken: z.string().optional(),
   items: z.array(orderItemSchema).min(1),
   comment: z.string().optional(),
   scheduledAt: z.string().optional(),
@@ -55,18 +56,25 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const { orderType, items, comment, scheduledAt, address, guestName, guestEmail, guestPhone, loyaltyPointsRedeem } = parsed.data;
+  const { orderType, tableToken, items, comment, scheduledAt, address, guestName, guestEmail, guestPhone, loyaltyPointsRedeem } = parsed.data;
 
   if (orderType === 'DELIVERY' && !address) {
     res.status(400).json({ success: false, error: 'Delivery address is required' });
     return;
   }
 
+  // Dine-in orders are placed by scanning a table QR code; a valid token is required.
+  if (orderType === 'DINE_IN' && !tableToken) {
+    res.status(400).json({ success: false, error: 'A table token is required for dine-in orders' });
+    return;
+  }
+
   // Get customer ID from auth if available
   const customerId = (req as any).user?.type === 'customer' ? (req as any).user.id : null;
 
-  // Guest checkout: require name + email if not authenticated
-  if (!customerId) {
+  // Guest checkout: require name + email if not authenticated.
+  // Dine-in is exempt — a walk-in can order anonymously from the table.
+  if (!customerId && orderType !== 'DINE_IN') {
     if (!guestName || !guestEmail) {
       res.status(400).json({ success: false, error: 'Guest name and email are required for guest checkout' });
       return;
@@ -102,6 +110,19 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
   if (!location) {
     res.status(400).json({ success: false, error: 'No active location found' });
     return;
+  }
+
+  // Resolve the dine-in table from its QR token — must be active and at this location.
+  let tableId: string | undefined;
+  if (orderType === 'DINE_IN') {
+    const table = await prisma.table.findFirst({
+      where: { qrToken: tableToken, isActive: true, locationId: location.id },
+    });
+    if (!table) {
+      res.status(400).json({ success: false, error: 'Invalid or inactive table' });
+      return;
+    }
+    tableId = table.id;
   }
 
   // Check busy mode
@@ -267,6 +288,7 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
       orderNumber: generateOrderNumber(),
       customerId,
       locationId: location.id,
+      tableId,
       orderType,
       subtotal,
       tax,

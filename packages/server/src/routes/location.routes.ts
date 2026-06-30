@@ -19,6 +19,8 @@ import {
   createTable,
   updateTable,
   deleteTable,
+  resolveTableByToken,
+  generateTableQr,
 } from '../controllers/table.controller.js';
 import { authenticate, requireStaff, requireRole } from '../middleware/auth.js';
 
@@ -38,10 +40,15 @@ router.post('/:locationId/delivery-zones', authenticate, requireStaff, requireRo
 router.patch('/:locationId/delivery-zones/:zoneId', authenticate, requireStaff, requireRole('SUPER_ADMIN', 'MANAGER'), updateDeliveryZone);
 router.delete('/:locationId/delivery-zones/:zoneId', authenticate, requireStaff, requireRole('SUPER_ADMIN'), deleteDeliveryZone);
 
+// Public dine-in QR token resolution — must be registered before the
+// parameterised `/:locationId/tables/...` routes to avoid shadowing.
+router.get('/tables/by-token/:qrToken', resolveTableByToken);
+
 // Tables - nested under locations
 router.get('/:locationId/tables', listTables);
 router.get('/:locationId/tables/:tableId', getTable);
 router.post('/:locationId/tables', authenticate, requireStaff, requireRole('SUPER_ADMIN', 'MANAGER'), createTable);
+router.post('/:locationId/tables/:tableId/qr', authenticate, requireStaff, requireRole('SUPER_ADMIN', 'MANAGER'), generateTableQr);
 router.patch('/:locationId/tables/:tableId', authenticate, requireStaff, requireRole('SUPER_ADMIN', 'MANAGER'), updateTable);
 router.delete('/:locationId/tables/:tableId', authenticate, requireStaff, requireRole('SUPER_ADMIN'), deleteTable);
 
