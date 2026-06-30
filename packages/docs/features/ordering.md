@@ -10,6 +10,7 @@ The ordering system supports delivery and pickup, guest checkout, scheduled orde
 |------|------------|
 | `DELIVERY` | 🏠 Order delivered to customer's address |
 | `PICKUP` | 🏪 Customer picks up from location |
+| `DINE_IN` | 📱 Placed by scanning a table QR code — see [QR / Dine-in Ordering](/features/qr-ordering) |
 
 Each location can independently enable/disable delivery and pickup, and set minimum order amounts and lead times.
 

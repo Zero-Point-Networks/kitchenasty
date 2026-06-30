@@ -145,7 +145,7 @@ No new context module is created; `CartContext.tsx` is modified.
 
 - [x] **T5.1** Integration tests for dine-in order creation + token resolution `[server]` `[~80 LOC]` — depends: T2.3 (done in Phase 2 TDD)
 - [x] **T5.2** E2E: scan-link → menu → dine-in checkout (pay-at-counter) in `e2e/storefront/dine-in.spec.ts` (**NEW**) `[storefront]` `[~60 LOC]` — depends: T4.3 (entry flow; see Phase 5 note)
-- [ ] **T5.3** Docs: QR ordering setup + table QR printing `[docs]` `[~30 LOC]` — depends: T3.2, T4.3
+- [x] **T5.3** Docs: QR ordering setup + table QR printing `[docs]` `[~30 LOC]` — depends: T3.2, T4.3
 
 ## Testing Strategy
 
@@ -208,5 +208,6 @@ E2E (`e2e/storefront/`): visiting `/t/<token>` lands on the menu with the table 
 
 ## Documentation Impact
 
-- [ ] `packages/docs/features/` — new "QR / Dine-in Ordering" feature page
-- [ ] `packages/docs/guide/` — operator guide: creating tables, printing QR codes
+- [x] `packages/docs/features/qr-ordering.md` — new "QR / Dine-in Ordering" feature page (registered in the VitePress sidebar)
+- [x] `packages/docs/features/ordering.md` — added `DINE_IN` to the Order Types table
+- [ ] `packages/docs/guide/` — operator guide on creating tables / printing QR codes folded into the feature page's "Generating & printing" section; no separate guide page added
