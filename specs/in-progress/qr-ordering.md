@@ -106,6 +106,10 @@ No new context module is created; `CartContext.tsx` is modified.
 > - **[Warn] print timing** — `win.print()` now fires on `win.onload` (avoids blank-page race).
 > - **[Suggestion] route comment** softened (the routes can't actually shadow).
 > - **[Suggestion] default export on `TableLanding`** — kept (repo-wide convention; all pages use default export). Corrected the project profile's Language Standards, which had wrongly forbidden it.
+>
+> Applied after a `refactorer` pass:
+> - Dropped the `(req as any).user` cast (typed via `Express.User`); extracted `DEFAULT_PUBLIC_URL` in `lib/qr.ts` and reused it in `payment.controller.ts` (was duplicated); hid the scheduling widget for dine-in checkout; converted `catch (err: any)` → `unknown` in the touched checkout/table handlers.
+> - **Out of scope (tracked separately)**: the refactorer also flagged a pre-existing double `deliveryZone.findMany` query and a German error message in the **delivery** flow — unrelated to dine-in. Captured as `specs/draft/delivery-zone-query-dedup.md` rather than expanded into this spec.
 
 ## Implementation Order
 
