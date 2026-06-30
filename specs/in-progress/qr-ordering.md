@@ -97,6 +97,16 @@ The storefront already has a central cart store: `packages/storefront/src/contex
 
 No new context module is created; `CartContext.tsx` is modified.
 
+## Review Fixes (code-reviewer pass)
+
+> Applied after a `code-reviewer` pass on the feature diff:
+> - **[Critical] `dineInEnabled` gate now enforced** — `createOrder` reads `siteSettings.orderSettings.dineInEnabled` and 400s dine-in orders when off (it was a dead toggle). Seeded `orderSettings.dineInEnabled: true`. New test: "rejects a DINE_IN order when dine-in is disabled".
+> - **[Warn] XSS hardening** — `handlePrintQr` HTML-escapes `tableName`/`url` before `document.write`.
+> - **[Warn] `any` → `unknown`** in the new `handleGenerateQr` catch.
+> - **[Warn] print timing** — `win.print()` now fires on `win.onload` (avoids blank-page race).
+> - **[Suggestion] route comment** softened (the routes can't actually shadow).
+> - **[Suggestion] default export on `TableLanding`** — kept (repo-wide convention; all pages use default export). Corrected the project profile's Language Standards, which had wrongly forbidden it.
+
 ## Implementation Order
 
 ### Phase 1: Schema & contracts ✅

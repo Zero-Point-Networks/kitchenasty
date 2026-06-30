@@ -112,9 +112,17 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  // Resolve the dine-in table from its QR token — must be active and at this location.
+  // Dine-in ordering is gated by a settings toggle; resolve the table from
+  // its QR token — must be active and at this location.
   let tableId: string | undefined;
   if (orderType === 'DINE_IN') {
+    const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+    const orderSettings = (settings?.orderSettings as Record<string, unknown> | null) ?? {};
+    if (!orderSettings.dineInEnabled) {
+      res.status(400).json({ success: false, error: 'Dine-in ordering is not currently available' });
+      return;
+    }
+
     const table = await prisma.table.findFirst({
       where: { qrToken: tableToken, isActive: true, locationId: location.id },
     });

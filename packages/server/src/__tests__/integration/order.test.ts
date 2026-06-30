@@ -17,6 +17,7 @@ vi.mock('../../lib/db.js', () => {
     loyaltyTransaction: { create: vi.fn() },
     automationRule: { findMany: vi.fn() },
     category: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), count: vi.fn() },
+    siteSettings: { findUnique: vi.fn() },
   };
   return { default: mockPrisma, prisma: mockPrisma };
 });
@@ -320,6 +321,7 @@ describe('Order API - Integration Tests', () => {
     it('creates a DINE_IN order from a valid table token, no address or guest contact required', async () => {
       mockedPrisma.menuItem.findMany.mockResolvedValue([sampleMenuItem] as any);
       mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      mockedPrisma.siteSettings.findUnique.mockResolvedValue({ orderSettings: { dineInEnabled: true } } as any);
       mockedPrisma.table.findFirst.mockResolvedValue(activeTable as any);
       mockedPrisma.order.create.mockResolvedValue({ ...sampleOrder, orderType: 'DINE_IN', tableId: 'table-1' } as any);
       mockedPrisma.automationRule.findMany.mockResolvedValue([]);
@@ -351,6 +353,7 @@ describe('Order API - Integration Tests', () => {
 
     it('rejects a DINE_IN order with an unknown or inactive table token', async () => {
       mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      mockedPrisma.siteSettings.findUnique.mockResolvedValue({ orderSettings: { dineInEnabled: true } } as any);
       mockedPrisma.table.findFirst.mockResolvedValue(null);
 
       const res = await request(app).post('/api/orders').send({
@@ -361,6 +364,22 @@ describe('Order API - Integration Tests', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('table');
+    });
+
+    it('rejects a DINE_IN order when dine-in is disabled in settings', async () => {
+      mockedPrisma.menuItem.findMany.mockResolvedValue([sampleMenuItem] as any);
+      mockedPrisma.location.findFirst.mockResolvedValue(sampleLocation as any);
+      mockedPrisma.siteSettings.findUnique.mockResolvedValue({ orderSettings: { dineInEnabled: false } } as any);
+
+      const res = await request(app).post('/api/orders').send({
+        orderType: 'DINE_IN',
+        items: [{ menuItemId: 'item-1', quantity: 1 }],
+        tableToken: 'tok-valid',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('not currently available');
+      expect(mockedPrisma.table.findFirst).not.toHaveBeenCalled();
     });
   });
 });

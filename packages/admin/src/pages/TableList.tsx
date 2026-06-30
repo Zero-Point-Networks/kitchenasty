@@ -105,26 +105,31 @@ export default function TableList() {
       const dataUrl = await QRCode.toDataURL(url, { width: 320, margin: 2 });
       setTables((prev) => prev.map((t) => (t.id === table.id ? { ...t, qrToken } : t)));
       setQrModal({ tableName: table.name, url, dataUrl });
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to generate QR code');
     }
   };
 
   const handlePrintQr = (modal: QrModalState) => {
     const win = window.open('', '_blank', 'width=420,height=560');
     if (!win) return;
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const name = esc(modal.tableName);
     win.document.write(
-      `<html><head><title>QR — ${modal.tableName}</title></head>` +
+      `<html><head><title>QR — ${name}</title></head>` +
       `<body style="text-align:center;font-family:sans-serif;padding:24px">` +
-      `<h2>${modal.tableName}</h2>` +
+      `<h2>${name}</h2>` +
       `<p>Scan to order</p>` +
-      `<img src="${modal.dataUrl}" alt="QR code for ${modal.tableName}" style="width:320px;height:320px" />` +
-      `<p style="word-break:break-all;color:#555;font-size:12px">${modal.url}</p>` +
+      `<img src="${modal.dataUrl}" alt="QR code for ${name}" style="width:320px;height:320px" />` +
+      `<p style="word-break:break-all;color:#555;font-size:12px">${esc(modal.url)}</p>` +
       `</body></html>`,
     );
     win.document.close();
-    win.focus();
-    win.print();
+    win.onload = () => {
+      win.focus();
+      win.print();
+    };
   };
 
   const handleDelete = async (id: string, name: string) => {

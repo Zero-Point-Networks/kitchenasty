@@ -40,8 +40,10 @@ router.post('/:locationId/delivery-zones', authenticate, requireStaff, requireRo
 router.patch('/:locationId/delivery-zones/:zoneId', authenticate, requireStaff, requireRole('SUPER_ADMIN', 'MANAGER'), updateDeliveryZone);
 router.delete('/:locationId/delivery-zones/:zoneId', authenticate, requireStaff, requireRole('SUPER_ADMIN'), deleteDeliveryZone);
 
-// Public dine-in QR token resolution — must be registered before the
-// parameterised `/:locationId/tables/...` routes to avoid shadowing.
+// Public dine-in QR token resolution. The literal `tables/by-token` segments
+// don't collide with `/:locationId/tables/:tableId` (which needs a literal
+// `tables` in the second segment), but keeping it above the parameterised
+// table routes makes the precedence obvious.
 router.get('/tables/by-token/:qrToken', resolveTableByToken);
 
 // Tables - nested under locations

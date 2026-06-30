@@ -617,6 +617,9 @@ async function main() {
         buttonText: 'Order Now',
         buttonLink: '/menu',
       },
+      orderSettings: {
+        dineInEnabled: true,
+      },
     },
   });
 
