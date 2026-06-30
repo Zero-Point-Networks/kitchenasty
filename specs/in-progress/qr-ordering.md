@@ -210,4 +210,4 @@ E2E (`e2e/storefront/`): visiting `/t/<token>` lands on the menu with the table 
 
 - [x] `packages/docs/features/qr-ordering.md` — new "QR / Dine-in Ordering" feature page (registered in the VitePress sidebar)
 - [x] `packages/docs/features/ordering.md` — added `DINE_IN` to the Order Types table
-- [ ] `packages/docs/guide/` — operator guide on creating tables / printing QR codes folded into the feature page's "Generating & printing" section; no separate guide page added
+- [x] `packages/docs/guide/` — operator guidance on creating tables / printing QR codes was folded into the feature page's "Generating & printing" section; no separate guide page added
