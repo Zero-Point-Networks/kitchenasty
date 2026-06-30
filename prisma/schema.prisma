@@ -333,6 +333,7 @@ model MenuItemAllergen {
 enum OrderType {
   DELIVERY
   PICKUP
+  DINE_IN
 }
 
 enum OrderStatus {
@@ -355,6 +356,8 @@ model Order {
   location    Location    @relation(fields: [locationId], references: [id])
   addressId   String?
   address     Address?    @relation(fields: [addressId], references: [id])
+  tableId     String?
+  table       Table?      @relation(fields: [tableId], references: [id])
 
   orderType   OrderType
   status      OrderStatus @default(PENDING)
@@ -476,8 +479,10 @@ model Table {
   name       String
   capacity   Int
   isActive   Boolean @default(true)
+  qrToken    String? @unique // opaque token encoded in the dine-in QR URL; regenerable
 
   reservations Reservation[]
+  orders       Order[]
 
   @@unique([locationId, name])
   @@map("tables")
@@ -594,7 +599,7 @@ model SiteSettings {
 
   // Operational settings
   generalSettings     Json?  // { timezone, distanceUnit, googleMapsApiKey, defaultCurrency, currencySymbol, currencyPosition, contactEmail, contactPhone }
-  orderSettings       Json?  // { enabled, minOrderDelivery, minOrderPickup, deliveryLeadTime, pickupLeadTime, enableFutureOrdering, enableTipping, tipOptions, taxRate }
+  orderSettings       Json?  // { enabled, minOrderDelivery, minOrderPickup, deliveryLeadTime, pickupLeadTime, enableFutureOrdering, enableTipping, tipOptions, taxRate, dineInEnabled }
   reservationSettings Json?  // { enabled, timeInterval, stayTime, maxAdvanceBookingDays, minCancellationNoticeHours, autoConfirm }
   mailSettings        Json?  // { smtpHost, smtpPort, smtpUser, smtpPass, senderName, senderEmail, encryption }
   paymentSettings     Json?  // { stripeEnabled, stripePublishableKey, stripeSecretKey, stripeWebhookSecret, paypalEnabled, paypalClientId, paypalClientSecret, paypalSandbox, cashEnabled }

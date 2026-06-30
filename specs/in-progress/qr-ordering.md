@@ -1,6 +1,6 @@
 # QR Ordering (Dine-In / Scan-to-Order)
 
-## Status: Draft
+## Status: In Progress
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
@@ -99,12 +99,14 @@ No new context module is created; `CartContext.tsx` is modified.
 
 ## Implementation Order
 
-### Phase 1: Schema & contracts
+### Phase 1: Schema & contracts ✅
 <!-- packages: server -->
 
-- [ ] **T1.1** Add `DINE_IN` to `OrderType`; add `Order.tableId` + relation; add `Table.qrToken` (unique) + `orders` relation `[server]` `[~10 LOC]`
-- [ ] **T1.2** Add `dineInEnabled` to `orderSettings` (schema comment + settings schema) `[server]` `[~4 LOC]`
-- [ ] **T1.3** Generate migration; verify additive `[server]` `[~10 LOC]` — depends: T1.1
+- [x] **T1.1** Add `DINE_IN` to `OrderType`; add `Order.tableId` + relation; add `Table.qrToken` (unique) + `orders` relation `[server]` `[~10 LOC]`
+- [x] **T1.2** Add `dineInEnabled` to `orderSettings` (schema comment + settings schema) `[server]` `[~4 LOC]`
+- [x] **T1.3** Generate migration; verify additive `[server]` `[~10 LOC]` — depends: T1.1
+
+> **Session notes**: Schema edits in `prisma/schema.prisma` — `OrderType.DINE_IN`, `Order.tableId` + `table` relation, `Table.qrToken @unique` + `orders` relation, `orderSettings` comment. `dineInEnabled: z.boolean().optional()` added to `orderSettingsSchema` (`settings.controller.ts:191`). Migration `prisma/migrations/20260630083351_add_qr_dine_in_ordering/migration.sql` generated via `prisma migrate diff` (datamodel-to-datamodel; no DB in env) — fully additive: `ADD VALUE 'DINE_IN'`, two nullable columns, one unique index, one `ON DELETE SET NULL` FK. `prisma validate` passes; client regenerated. No DB available to run `migrate dev`, so the migration is unapplied — it will apply on first `prisma migrate deploy`/`dev` in a real env.
 
 ### Phase 2: Server — tokens & dine-in orders
 <!-- depends: Schema & contracts | packages: server -->
