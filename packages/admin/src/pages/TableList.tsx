@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { api } from '../lib/api.js';
 
 interface Table {
@@ -7,7 +8,14 @@ interface Table {
   name: string;
   capacity: number;
   isActive: boolean;
+  qrToken?: string | null;
   _count: { reservations: number };
+}
+
+interface QrModalState {
+  tableName: string;
+  url: string;
+  dataUrl: string;
 }
 
 interface LocationInfo {
@@ -28,6 +36,7 @@ export default function TableList() {
   const [formCapacity, setFormCapacity] = useState(2);
   const [formActive, setFormActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [qrModal, setQrModal] = useState<QrModalState | null>(null);
 
   const fetchTables = () => {
     setLoading(true);
@@ -80,6 +89,42 @@ export default function TableList() {
       alert(err.message);
     }
     setSaving(false);
+  };
+
+  const handleGenerateQr = async (table: Table) => {
+    if (table.qrToken && !confirm(
+      `Table "${table.name}" already has a QR code. Generating a new one invalidates any printed copies. Continue?`,
+    )) return;
+
+    try {
+      const res = await api.post<{ data: { qrToken: string; url: string } }>(
+        `/locations/${locationId}/tables/${table.id}/qr`,
+        {},
+      );
+      const { qrToken, url } = res.data;
+      const dataUrl = await QRCode.toDataURL(url, { width: 320, margin: 2 });
+      setTables((prev) => prev.map((t) => (t.id === table.id ? { ...t, qrToken } : t)));
+      setQrModal({ tableName: table.name, url, dataUrl });
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handlePrintQr = (modal: QrModalState) => {
+    const win = window.open('', '_blank', 'width=420,height=560');
+    if (!win) return;
+    win.document.write(
+      `<html><head><title>QR — ${modal.tableName}</title></head>` +
+      `<body style="text-align:center;font-family:sans-serif;padding:24px">` +
+      `<h2>${modal.tableName}</h2>` +
+      `<p>Scan to order</p>` +
+      `<img src="${modal.dataUrl}" alt="QR code for ${modal.tableName}" style="width:320px;height:320px" />` +
+      `<p style="word-break:break-all;color:#555;font-size:12px">${modal.url}</p>` +
+      `</body></html>`,
+    );
+    win.document.close();
+    win.focus();
+    win.print();
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -234,6 +279,9 @@ export default function TableList() {
                     {table._count.reservations}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
+                    <button onClick={() => handleGenerateQr(table)} className="text-primary-600 hover:text-primary-900 font-medium" aria-label={`${table.qrToken ? 'Regenerate' : 'Generate'} QR code for table ${table.name}`}>
+                      {table.qrToken ? 'Regenerate QR' : 'Generate QR'}
+                    </button>
                     <button onClick={() => openEditForm(table)} className="text-primary-600 hover:text-primary-900 font-medium" aria-label={`Edit table ${table.name}`}>
                       Edit
                     </button>
@@ -245,6 +293,32 @@ export default function TableList() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {qrModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setQrModal(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">{qrModal.tableName}</h3>
+            <p className="text-sm text-gray-500 mb-4">Diners scan this to order from the table.</p>
+            <img src={qrModal.dataUrl} alt={`QR code for ${qrModal.tableName}`} className="mx-auto w-64 h-64" />
+            <p className="text-xs text-gray-400 break-all mt-3">{qrModal.url}</p>
+            <div className="flex gap-3 justify-center mt-5">
+              <button
+                onClick={() => handlePrintQr(qrModal)}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
+              >
+                Print
+              </button>
+              <button
+                onClick={() => setQrModal(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

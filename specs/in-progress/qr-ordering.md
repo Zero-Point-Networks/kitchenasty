@@ -120,11 +120,13 @@ No new context module is created; `CartContext.tsx` is modified.
 ### Phase 5 note
 > T5.1 (server integration tests for dine-in order creation + token resolution) was completed as part of Phase 2's TDD cycle — see the Phase 2 session notes. Marked complete below.
 
-### Phase 3: Admin — QR management
+### Phase 3: Admin — QR management ✅
 <!-- depends: Server — tokens & dine-in orders | packages: admin -->
 
-- [ ] **T3.1** Add `qrcode`/`qrcode.react` dependency to admin `[admin]` `[~2 LOC]`
-- [ ] **T3.2** QR generate/regenerate + print view in `TableList.tsx` (regenerate warns codes are invalidated) `[admin]` `[~80 LOC]` — depends: T2.2, T3.1
+- [x] **T3.1** Add `qrcode`/`qrcode.react` dependency to admin `[admin]` `[~2 LOC]`
+- [x] **T3.2** QR generate/regenerate + print view in `TableList.tsx` (regenerate warns codes are invalidated) `[admin]` `[~80 LOC]` — depends: T2.2, T3.1
+
+> **Session notes**: Used `qrcode` (`^1.5.4`, + `@types/qrcode`) rather than `qrcode.react` — `QRCode.toDataURL()` yields a data URL that prints cleanly in a new window. `TableList.tsx`: per-row "Generate QR" / "Regenerate QR" button (regenerate `confirm()`s that printed copies are invalidated), `handleGenerateQr` POSTs to `/locations/:id/tables/:id/qr`, renders the returned URL as a QR in a modal with a Print action (`handlePrintQr` opens a print window with the data-URL image + table name + URL). `Table` interface gained `qrToken`. Admin `tsc -b` clean. No admin unit-test runner in repo; UI is covered by the e2e flow (T5.2).
 
 ### Phase 4: Storefront — scan-to-order flow
 <!-- depends: Server — tokens & dine-in orders | packages: storefront -->
