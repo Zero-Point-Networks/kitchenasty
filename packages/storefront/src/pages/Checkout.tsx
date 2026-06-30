@@ -171,8 +171,8 @@ export default function Checkout() {
 
       clear();
       navigate(`/order/${orderId}`, { state: { order: data.data } });
-    } catch (err: any) {
-      setError(err.message || t('common.error'));
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -288,7 +288,8 @@ export default function Checkout() {
             </div>
           )}
 
-          {/* Schedule */}
+          {/* Schedule — not applicable to dine-in (diner is at the table now) */}
+          {!isDineIn && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('checkout.scheduling')}</h2>
             <div className="space-y-3">
@@ -322,6 +323,7 @@ export default function Checkout() {
               )}
             </div>
           </div>
+          )}
 
           {/* Notes */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

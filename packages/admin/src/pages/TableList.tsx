@@ -85,8 +85,8 @@ export default function TableList() {
       }
       setShowForm(false);
       fetchTables();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to save table');
     }
     setSaving(false);
   };
@@ -137,8 +137,8 @@ export default function TableList() {
     try {
       await api.delete(`/locations/${locationId}/tables/${id}`);
       setTables((prev) => prev.filter((t) => t.id !== id));
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete table');
     }
   };
 

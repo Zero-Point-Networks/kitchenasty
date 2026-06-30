@@ -70,7 +70,7 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
   }
 
   // Get customer ID from auth if available
-  const customerId = (req as any).user?.type === 'customer' ? (req as any).user.id : null;
+  const customerId = req.user?.type === 'customer' ? req.user.id : null;
 
   // Guest checkout: require name + email if not authenticated.
   // Dine-in is exempt — a walk-in can order anonymously from the table.

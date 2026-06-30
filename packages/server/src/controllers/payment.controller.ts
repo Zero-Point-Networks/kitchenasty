@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getStripe } from '../lib/stripe.js';
 import prisma from '../lib/db.js';
 import { createPayPalOrder, capturePayPalOrder } from '../lib/paypal.js';
+import { DEFAULT_PUBLIC_URL } from '../lib/qr.js';
 
 export async function createPaymentIntent(req: Request, res: Response): Promise<void> {
   const { orderId } = req.body;
@@ -106,7 +107,7 @@ export async function createCheckoutSession(req: Request, res: Response): Promis
     return;
   }
 
-  const publicUrl = process.env.PUBLIC_URL || 'https://inka.kitchenasty.com';
+  const publicUrl = process.env.PUBLIC_URL || DEFAULT_PUBLIC_URL;
   const customerEmail = order.customer?.email ?? order.guestEmail ?? undefined;
 
   try {
