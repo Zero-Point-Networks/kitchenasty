@@ -147,6 +147,9 @@
     "paymentMethod": "Payment Method",
     "creditCard": "Credit Card (Stripe)",
     "cashOnDelivery": "Cash on Delivery",
+    "payAtCounter": "Pay at Counter",
+    "dineInTitle": "Dine-in",
+    "dineInSubtitle": "Order for your table — pay now or at the counter.",
     "orderSummary": "Order Summary",
     "subtotal": "Subtotal",
     "tax": "Tax",
@@ -157,6 +160,12 @@
     "processing": "Processing...",
     "guestCheckout": "Guest Checkout",
     "guestEmail": "Email for order updates"
+  },
+  "tableLanding": {
+    "loading": "Opening the menu for your table…",
+    "invalidTitle": "Table not found",
+    "invalidBody": "This QR code isn't valid or the table is no longer active. You can still browse the menu.",
+    "browseMenu": "Browse Menu"
   },
   "orderConfirmation": {
     "title": "Order Placed!",

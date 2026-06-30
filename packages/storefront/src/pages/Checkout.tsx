@@ -11,9 +11,11 @@ const TAX_RATE = 0.08;
 
 export default function Checkout() {
   const { t } = useTranslation();
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, clear, dineIn } = useCart();
   const { user, token } = useAuth();
   const navigate = useNavigate();
+
+  const isDineIn = !!dineIn;
 
   const [orderType, setOrderType] = useState<OrderType>('delivery');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
@@ -43,7 +45,7 @@ export default function Checkout() {
   const loyaltyDiscount = loyaltyRedeem / 100;
 
   const tax = subtotal * TAX_RATE;
-  const currentDeliveryFee = orderType === 'delivery' ? deliveryFee : 0;
+  const currentDeliveryFee = !isDineIn && orderType === 'delivery' ? deliveryFee : 0;
   const total = subtotal + tax + currentDeliveryFee - loyaltyDiscount;
 
   // Check busy mode on mount
@@ -107,7 +109,7 @@ export default function Checkout() {
       }));
 
       const body: Record<string, unknown> = {
-        orderType: orderType.toUpperCase(),
+        orderType: isDineIn ? 'DINE_IN' : orderType.toUpperCase(),
         paymentMethod,
         items: orderItems,
         comment: comment || undefined,
@@ -115,14 +117,17 @@ export default function Checkout() {
         couponCode: couponCode || undefined,
       };
 
-      if (orderType === 'delivery') {
+      if (isDineIn) {
+        body.tableToken = dineIn!.token;
+      } else if (orderType === 'delivery') {
         body.address = address;
       }
 
-      // Guest info
-      if (!user) {
-        body.guestName = guestName;
-        body.guestEmail = guestEmail;
+      // Guest info — required for delivery/pickup guest checkout, optional for
+      // dine-in (a walk-in can order anonymously from the table).
+      if (!user && (guestName || guestEmail || guestPhone)) {
+        body.guestName = guestName || undefined;
+        body.guestEmail = guestEmail || undefined;
         body.guestPhone = guestPhone || undefined;
       }
 
@@ -191,37 +196,47 @@ export default function Checkout() {
             <div className="bg-red-50 text-red-700 p-4 rounded-lg text-sm">{error}</div>
           )}
 
-          {/* Order type */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('checkout.orderType')}</h2>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setOrderType('delivery')}
-                className={`flex-1 py-3 rounded-lg font-medium text-sm border-2 transition-colors ${
-                  orderType === 'delivery'
-                    ? 'border-primary-600 bg-primary-50 text-primary-700'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-              >
-                {t('checkout.delivery')}
-              </button>
-              <button
-                type="button"
-                onClick={() => setOrderType('pickup')}
-                className={`flex-1 py-3 rounded-lg font-medium text-sm border-2 transition-colors ${
-                  orderType === 'pickup'
-                    ? 'border-primary-600 bg-primary-50 text-primary-700'
-                    : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                }`}
-              >
-                {t('checkout.pickup')}
-              </button>
+          {/* Dine-in banner (QR ordering) */}
+          {isDineIn ? (
+            <div className="bg-primary-50 border-2 border-primary-200 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-primary-800">
+                {t('checkout.dineInTitle')} — {dineIn!.tableName}
+              </h2>
+              <p className="text-sm text-primary-700 mt-1">{t('checkout.dineInSubtitle')}</p>
             </div>
-          </div>
+          ) : (
+            /* Order type */
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('checkout.orderType')}</h2>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setOrderType('delivery')}
+                  className={`flex-1 py-3 rounded-lg font-medium text-sm border-2 transition-colors ${
+                    orderType === 'delivery'
+                      ? 'border-primary-600 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {t('checkout.delivery')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOrderType('pickup')}
+                  className={`flex-1 py-3 rounded-lg font-medium text-sm border-2 transition-colors ${
+                    orderType === 'pickup'
+                      ? 'border-primary-600 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  {t('checkout.pickup')}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Delivery address */}
-          {orderType === 'delivery' && (
+          {!isDineIn && orderType === 'delivery' && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('checkout.deliveryAddress')}</h2>
               {zoneError && (
@@ -383,7 +398,7 @@ export default function Checkout() {
                   onChange={() => setPaymentMethod('cash')}
                   className="accent-primary-600"
                 />
-                <span className="text-sm font-medium text-gray-900">{t('checkout.cashOnDelivery')}</span>
+                <span className="text-sm font-medium text-gray-900">{isDineIn ? t('checkout.payAtCounter') : t('checkout.cashOnDelivery')}</span>
               </label>
               <label className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
                 paymentMethod === 'stripe'
@@ -421,24 +436,30 @@ export default function Checkout() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h2>
               <p className="text-sm text-gray-600 mb-3">
-                <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium underline">
-                  {t('nav.login')}
-                </Link>{' '}
-                for faster checkout, or continue as guest:
+                {isDineIn ? (
+                  'Optional — add your details if you\'d like an update when your order is ready.'
+                ) : (
+                  <>
+                    <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium underline">
+                      {t('nav.login')}
+                    </Link>{' '}
+                    for faster checkout, or continue as guest:
+                  </>
+                )}
               </p>
               <div className="space-y-3">
                 <input
                   type="text"
-                  required
-                  placeholder="Full name *"
+                  required={!isDineIn}
+                  placeholder={isDineIn ? 'Full name (optional)' : 'Full name *'}
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
                 />
                 <input
                   type="email"
-                  required
-                  placeholder="Email address *"
+                  required={!isDineIn}
+                  placeholder={isDineIn ? 'Email address (optional)' : 'Email address *'}
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none text-sm"
@@ -491,7 +512,7 @@ export default function Checkout() {
                 <span className="text-gray-600">{t('checkout.tax')}</span>
                 <span className="text-gray-900">${tax.toFixed(2)}</span>
               </div>
-              {orderType === 'delivery' && (
+              {!isDineIn && orderType === 'delivery' && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">{t('checkout.deliveryFee')}</span>
                   <span className="text-gray-900">${currentDeliveryFee.toFixed(2)}</span>

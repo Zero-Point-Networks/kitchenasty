@@ -470,15 +470,18 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Tables
+  // Tables — Table 1 gets a deterministic QR token so the dine-in flow is
+  // demoable/e2e-testable out of the box (regenerate from admin in production).
   for (let i = 1; i <= 10; i++) {
+    const qrToken = i === 1 ? 'dev-table-1-qr' : undefined;
     await prisma.table.upsert({
       where: { locationId_name: { locationId: location.id, name: `Table ${i}` } },
-      update: {},
+      update: qrToken ? { qrToken } : {},
       create: {
         locationId: location.id,
         name: `Table ${i}`,
         capacity: i <= 4 ? 2 : i <= 8 ? 4 : 6,
+        qrToken,
       },
     });
   }

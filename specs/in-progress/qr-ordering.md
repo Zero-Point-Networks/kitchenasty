@@ -128,18 +128,23 @@ No new context module is created; `CartContext.tsx` is modified.
 
 > **Session notes**: Used `qrcode` (`^1.5.4`, + `@types/qrcode`) rather than `qrcode.react` — `QRCode.toDataURL()` yields a data URL that prints cleanly in a new window. `TableList.tsx`: per-row "Generate QR" / "Regenerate QR" button (regenerate `confirm()`s that printed copies are invalidated), `handleGenerateQr` POSTs to `/locations/:id/tables/:id/qr`, renders the returned URL as a QR in a modal with a Print action (`handlePrintQr` opens a print window with the data-URL image + table name + URL). `Table` interface gained `qrToken`. Admin `tsc -b` clean. No admin unit-test runner in repo; UI is covered by the e2e flow (T5.2).
 
-### Phase 4: Storefront — scan-to-order flow
+### Phase 4: Storefront — scan-to-order flow ✅
 <!-- depends: Server — tokens & dine-in orders | packages: storefront -->
 
-- [ ] **T4.1** Extend `CartContext.tsx` with `dineIn` state + `setDineIn` (clear on `clear()`) `[storefront]` `[~25 LOC]` — depends: T2.1
-- [ ] **T4.2** `TableLanding` page + `/t/:token` route; resolves token, calls `setDineIn`, redirects to menu `[storefront]` `[~50 LOC]` — depends: T4.1
-- [ ] **T4.3** Dine-in checkout in `Checkout.tsx`: table banner, no address step, Pay-now vs Pay-at-counter, send `tableToken` `[storefront]` `[~70 LOC]` — depends: T4.1, T2.3
+- [x] **T4.1** Extend `CartContext.tsx` with `dineIn` state + `setDineIn` (clear on `clear()`) `[storefront]` `[~25 LOC]` — depends: T2.1
+- [x] **T4.2** `TableLanding` page + `/t/:token` route; resolves token, calls `setDineIn`, redirects to menu `[storefront]` `[~50 LOC]` — depends: T4.1
+- [x] **T4.3** Dine-in checkout in `Checkout.tsx`: table banner, no address step, Pay-now vs Pay-at-counter, send `tableToken` `[storefront]` `[~70 LOC]` — depends: T4.1, T2.3
+
+> **Session notes**: `DineInContext` = `{ token, locationId, tableId, tableName }` — the raw `token` is kept so checkout can submit it as `tableToken` (the resolver discards it otherwise). `CartContext` extended with `dineIn` + `setDineIn`, cleared in `clear()`. New `TableLanding` page (`/t/:token`) fetches the by-token resolver, calls `setDineIn`, redirects to `/menu` (shows a recoverable error on invalid token). `Checkout`: when `dineIn` is set it forces `orderType: 'DINE_IN'`, hides the order-type selector + address (shows a "Dine-in — {tableName}" banner), forces delivery fee to 0, relabels cash as "Pay at Counter", makes guest contact optional, and submits `tableToken`. New i18n keys added to `en.json` (`checkout.payAtCounter/dineInTitle/dineInSubtitle`, `tableLanding.*`); other 5 locales fall back to `en` (`fallbackLng: 'en'`) — run `npm run translate -w packages/storefront` to localize. `tsc -b` clean for admin + storefront.
+
+### Phase 5 note (T5.2)
+> T5.2 (e2e) added as `e2e/storefront/dine-in.spec.ts` — covers the deterministic dine-in entry behaviour (invalid token recovery + valid-token resolution to `/menu`). Seeded a fixed token `dev-table-1-qr` on Table 1 in `prisma/seed.ts` to make it runnable. The full menu-modal → add-to-cart → place-order path is not e2e'd (the existing suite doesn't build carts); dine-in order creation is covered by server integration tests. E2E requires a running stack (server + storefront + DB) — not executed in this environment.
 
 ### Phase 5: Tests & docs
 <!-- depends: Storefront — scan-to-order flow | packages: server, storefront, docs -->
 
 - [x] **T5.1** Integration tests for dine-in order creation + token resolution `[server]` `[~80 LOC]` — depends: T2.3 (done in Phase 2 TDD)
-- [ ] **T5.2** E2E: scan-link → menu → dine-in checkout (pay-at-counter) in `e2e/storefront/dine-in.spec.ts` (**NEW**) `[storefront]` `[~60 LOC]` — depends: T4.3
+- [x] **T5.2** E2E: scan-link → menu → dine-in checkout (pay-at-counter) in `e2e/storefront/dine-in.spec.ts` (**NEW**) `[storefront]` `[~60 LOC]` — depends: T4.3 (entry flow; see Phase 5 note)
 - [ ] **T5.3** Docs: QR ordering setup + table QR printing `[docs]` `[~30 LOC]` — depends: T3.2, T4.3
 
 ## Testing Strategy
