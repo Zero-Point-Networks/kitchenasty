@@ -158,6 +158,57 @@ PATCH /api/locations/:locationId/tables/:tableId
 DELETE /api/locations/:locationId/tables/:tableId
 ```
 
+## 🎟️ Table QR Codes (Dine-in)
+
+See [QR / Dine-in Ordering](/features/qr-ordering) for the full flow.
+
+### 🌐 Resolve a Table by QR Token (Public)
+
+```
+GET /api/locations/tables/by-token/:qrToken
+```
+
+Public, no auth — exposes only table/location labels. Used by the storefront when a diner scans a table QR code.
+
+**Response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "locationId": "location-id",
+    "locationName": "Downtown Kitchen",
+    "tableId": "table-id",
+    "tableName": "Table 4"
+  }
+}
+```
+
+Returns `404` if the token is unknown or the table is inactive.
+
+### 🔑 Generate / Regenerate a Table QR Token (Staff)
+
+```
+POST /api/locations/:locationId/tables/:tableId/qr
+Authorization: Bearer <manager-token>
+```
+
+Sets or rotates the table's `qrToken`. Regenerating invalidates any previously printed code. Requires Manager or Super Admin.
+
+**Response:** `200 OK`
+
+```json
+{
+  "success": true,
+  "data": {
+    "qrToken": "opaque-url-safe-token",
+    "url": "https://<storefront>/t/opaque-url-safe-token"
+  }
+}
+```
+
+The `url` is built from the server's `PUBLIC_URL`.
+
 ## 🔒 Permissions Summary
 
 | Action | Required Role |
@@ -171,3 +222,5 @@ DELETE /api/locations/:locationId/tables/:tableId
 | 🌐 List / get tables | Public |
 | ✏️ Manage tables | Manager, Super Admin |
 | 🗑️ Delete tables | Super Admin |
+| 🌐 Resolve table by QR token | Public |
+| 🎟️ Generate / regenerate table QR | Manager, Super Admin |

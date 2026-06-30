@@ -36,6 +36,7 @@ Online ordering configuration:
 | `enableTipping` | 💰 Show tipping options at checkout |
 | `tipOptions` | 💵 Array of tip percentages (e.g. `[10, 15, 20, 25]`) |
 | `taxRate` | 🧾 Tax rate percentage |
+| `dineInEnabled` | 🎟️ Enable/disable [QR / dine-in ordering](/features/qr-ordering) |
 
 ### 🪑 Reservations
 

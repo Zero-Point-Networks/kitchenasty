@@ -68,9 +68,12 @@ Update general settings. All fields are optional.
   "enableFutureOrdering": true,
   "enableTipping": true,
   "tipOptions": [10, 15, 20, 25],
-  "taxRate": 8.5
+  "taxRate": 8.5,
+  "dineInEnabled": true
 }
 ```
+
+`dineInEnabled` gates QR / dine-in ordering — when `false`, dine-in order requests are rejected. See [QR / Dine-in Ordering](/features/qr-ordering).
 
 ---
 

@@ -7,6 +7,8 @@ POST /api/orders
 Authorization: Bearer <token> (optional — guest checkout supported)
 ```
 
+`orderType` is one of `DELIVERY`, `PICKUP`, or `DINE_IN`. `DINE_IN` orders are placed by scanning a table QR code (see [QR / Dine-in Ordering](/features/qr-ordering)) — they require a `tableToken`, do **not** require an address, and may be placed anonymously (guest name/email optional).
+
 **Request (authenticated customer):**
 
 ```json
@@ -49,6 +51,21 @@ Authorization: Bearer <token> (optional — guest checkout supported)
   "paymentMethod": "CASH"
 }
 ```
+
+**Request (dine-in via QR — anonymous):**
+
+```json
+{
+  "orderType": "DINE_IN",
+  "tableToken": "<qrToken from the scanned code>",
+  "items": [
+    { "menuItemId": "item-id", "quantity": 1 }
+  ],
+  "paymentMethod": "CASH"
+}
+```
+
+The server resolves `tableToken` to an active table at the location and stores its `tableId` on the order. Returns `400` if the token is missing/invalid/inactive, or if dine-in ordering is disabled (`orderSettings.dineInEnabled`).
 
 **Response:** `201 Created`
 
