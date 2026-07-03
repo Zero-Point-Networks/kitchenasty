@@ -198,8 +198,9 @@ async function main() {
     },
   });
 
-  // Caesar salad size option
-  const sizeOption = await prisma.menuOption.create({
+  // Caesar salad options (no unique key — guard so re-seeding doesn't duplicate)
+  if ((await prisma.menuOption.count({ where: { menuItemId: caesarSalad.id } })) === 0) {
+  await prisma.menuOption.create({
     data: {
       menuItemId: caesarSalad.id,
       name: 'Size',
@@ -231,6 +232,7 @@ async function main() {
       },
     },
   });
+  }
 
   const hummusTrio = await prisma.menuItem.upsert({
     where: { slug: 'hummus-trio' },
@@ -322,7 +324,8 @@ async function main() {
     },
   });
 
-  // Pizza size option
+  // Pizza options (no unique key — guard so re-seeding doesn't duplicate)
+  if ((await prisma.menuOption.count({ where: { menuItemId: margherita.id } })) === 0) {
   await prisma.menuOption.create({
     data: {
       menuItemId: margherita.id,
@@ -358,6 +361,7 @@ async function main() {
       },
     },
   });
+  }
 
   const tiramisu = await prisma.menuItem.upsert({
     where: { slug: 'tiramisu' },

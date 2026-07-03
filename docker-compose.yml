@@ -50,8 +50,8 @@ services:
       # Origin the storefront is reached at — dine-in QR codes point here.
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:5174}
     depends_on:
-      postgres:
-        condition: service_healthy
+      # migrate already waits for postgres to be healthy, so gating on migrate
+      # completing implies postgres is ready.
       migrate:
         condition: service_completed_successfully
     healthcheck:

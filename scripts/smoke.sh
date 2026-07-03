@@ -28,13 +28,11 @@ curl -fsS "$ADMIN/" >/dev/null && pass "admin reachable ($ADMIN)" \
   || fail "admin reachable"
 
 # 4. Seed applied — menu has items
-menu="$(curl -fsS "$API/api/menu")"
-echo "$menu" | grep -q '"id"' && pass "seeded menu returned items" \
+curl -fsS "$API/api/menu" | grep -q '"id"' && pass "seeded menu returned items" \
   || fail "seeded menu empty (is the migrate/seed step done?)"
 
 # 5. Dine-in QR token resolves (seeded dev-table-1-qr)
-byToken="$(curl -fsS "$API/api/locations/tables/by-token/$QR_TOKEN")"
-echo "$byToken" | grep -q '"tableName"' && pass "QR token resolves ($QR_TOKEN)" \
+curl -fsS "$API/api/locations/tables/by-token/$QR_TOKEN" | grep -q '"tableName"' && pass "QR token resolves ($QR_TOKEN)" \
   || fail "QR token '$QR_TOKEN' did not resolve"
 
 echo "All smoke checks passed."
