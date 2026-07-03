@@ -132,6 +132,14 @@ Add a root `docker:dev` script for discoverability:
 
 - **Bake migrate/seed into the server runtime image** (entrypoint runs `prisma migrate deploy` on boot). Rejected: the runtime image is intentionally `--omit=dev`; adding the Prisma CLI + `tsx` bloats the prod image. A separate builder-target init service keeps prod lean while giving dev a working stack.
 
+## Review Fixes (code-reviewer + docs-reviewer)
+
+> - **[code-reviewer] Seed idempotency hole closed** — the 4 unguarded `menuOption.create()` calls (Caesar/Margherita option groups; `MenuOption` has no unique key) now sit behind `count(...) === 0` guards, so re-seeding no longer duplicates option groups.
+> - **[code-reviewer] `smoke.sh`** — inlined the two `curl | grep` checks so `set -e` no longer exits before the diagnostic `fail` message.
+> - **[code-reviewer] compose** — removed the redundant `server → postgres` `depends_on` (gating on `migrate` completing already implies postgres healthy).
+> - **[docs-reviewer] README** — fixed the stale quickstart (`docker compose up -d postgres` for the hot-reload flow; added a full-stack Docker pointer).
+> - **[docs-reviewer] `configuration/environment-variables.md`** — documented `PUBLIC_URL` + added it to the example `.env`.
+
 ## Implementation Order
 
 > **Package tags**: `[infra]` denotes root-level infrastructure files (`docker-compose.yml`, `.env.example`, `scripts/`, root `package.json`) that have no owning workspace package — it is not one of the profile's six workspace packages. Tooling that validates tags against the package list should treat `[infra]` as root-scoped.
@@ -217,5 +225,5 @@ Optional but recommended: run the existing Playwright suite against the dockeriz
 
 ## Documentation Impact
 
-- [ ] `packages/docs/guide/installation-docker.md` — `docker compose up` now auto-migrates + seeds; `PUBLIC_URL`; ports; smoke check
-- [ ] `packages/docs/self-hosting/docker-compose.md` — local-dev `migrate` service vs the prod/demo compose
+- [x] `packages/docs/guide/installation-docker.md` — `docker compose up` now auto-migrates + seeds; `PUBLIC_URL`; ports; smoke check
+- [x] `packages/docs/self-hosting/docker-compose.md` — local-dev `migrate` service vs the prod/demo compose
