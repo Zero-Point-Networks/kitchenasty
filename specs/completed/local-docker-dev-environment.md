@@ -1,6 +1,13 @@
 # Local Docker Dev Environment
 
-## Status: In Progress
+## Status: Complete
+
+<!-- Runtime-verified 3 Jul 2026: `docker compose up --build` on Docker-from-apt →
+migrate ran (deploy + seed, exit 0), server healthy, `./scripts/smoke.sh` all green
+(health, storefront, admin, seeded menu, dine-in QR token `dev-table-1-qr` resolves).
+Two first-boot fixes applied: pino-pretty logger fallback (T4.1) and the smoke
+menu endpoint (`/api/menu/items`). -->
+
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->

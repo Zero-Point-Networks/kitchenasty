@@ -7,7 +7,13 @@ Updated: 3 July 2026 | `/wf:finalize` — deep audit (no fixes needed)
 
 Read every implementation file end-to-end. **No bugs, gaps, or edge cases found.** Verified exhaustively that the seed is re-run-safe: all 10 `prisma.*.create()` calls are guarded (count-checks, find-or-create, or the orders loop condition), and both `createMany` calls (`menuItemAllergen`, `menuItemMealtime`) carry `skipDuplicates: true` over composite primary keys. `docker-compose.yml`, `scripts/smoke.sh`, and the `db:deploy` script are correct. Regression check: the removed manual-migrate doc step was broken (improvement, not a loss); the README `up -d` → `up -d postgres` change fixes a pre-existing hot-reload port conflict.
 
-Post-finalization: 306 tests pass; seed `tsc`, `bash -n`, and `docker compose config` all clean. The runtime path (`docker compose up` + smoke) still requires a machine with Docker daemon access — the operator is running it out-of-band.
+Post-finalization: 306 tests pass; seed `tsc`, `bash -n`, and `docker compose config` all clean.
+
+**Runtime verified (3 Jul 2026)** on the operator's machine (after switching from snap Docker to Docker-from-apt): `docker compose up --build` → `migrate` applied migrations + seed and exited 0; server healthy; `./scripts/smoke.sh` **all green** (health, storefront, admin, seeded menu, and the dine-in QR token `dev-table-1-qr` resolving in the live stack). Two first-boot issues were found and fixed during verification:
+- **Server crash** `unable to determine transport target for "pino-pretty"` — `pino-pretty` (dev-only dep) was used as a log transport in the `--omit=dev` runtime image. Fixed `lib/logger.ts` to use it only when it resolves, else fall back to JSON logs. (Phase 4 / T4.1)
+- **Smoke script** hit a non-existent `/api/menu` route (404) — corrected to `/api/menu/items`.
+
+Spec closed out and moved to `specs/completed/`.
 
 ---
 
