@@ -10,6 +10,7 @@ All server configuration is managed through environment variables in `packages/s
 | `NODE_ENV` | Environment (`development`, `production`, `test`) | `development` | No |
 | `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173,http://localhost:5174` | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | — | Yes |
+| `PUBLIC_URL` | Public origin the storefront is served at; dine-in QR codes are generated pointing here | `http://localhost:5174` | No |
 
 ## 🔑 Authentication
 
@@ -53,6 +54,7 @@ All server configuration is managed through environment variables in `packages/s
 PORT=3000
 NODE_ENV=development
 CORS_ORIGINS=http://localhost:5173,http://localhost:5174
+PUBLIC_URL=http://localhost:5174
 
 DATABASE_URL=postgresql://kitchenasty:kitchenasty@localhost:5432/kitchenasty
 

@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+#### Local Docker Setup
+- `docker compose up` now brings up a fully working stack out of the box — database migrations and demo data are applied **automatically**, so there's no manual setup step (the previous manual instructions no longer worked with the slimmed-down images)
+- Added a smoke-test script (`scripts/smoke.sh`) to verify a running stack
+- New `PUBLIC_URL` setting controls the storefront origin that dine-in QR codes point to
+
 ### Added
 
 #### QR / Dine-in Ordering

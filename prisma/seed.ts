@@ -88,47 +88,53 @@ async function main() {
     });
   }
 
-  // Delivery zones
-  await prisma.deliveryZone.create({
-    data: {
-      locationId: location.id,
-      name: 'Zone 1 - Nearby',
-      charge: 3.99,
-      minOrder: 15,
-      isActive: true,
-    },
-  });
+  // Delivery zones (no unique key — guard so re-seeding doesn't duplicate)
+  if ((await prisma.deliveryZone.count({ where: { locationId: location.id } })) === 0) {
+    await prisma.deliveryZone.create({
+      data: {
+        locationId: location.id,
+        name: 'Zone 1 - Nearby',
+        charge: 3.99,
+        minOrder: 15,
+        isActive: true,
+      },
+    });
 
-  await prisma.deliveryZone.create({
-    data: {
-      locationId: location.id,
-      name: 'Zone 2 - Extended',
-      charge: 6.99,
-      minOrder: 25,
-      isActive: true,
-    },
-  });
+    await prisma.deliveryZone.create({
+      data: {
+        locationId: location.id,
+        name: 'Zone 2 - Extended',
+        charge: 6.99,
+        minOrder: 25,
+        isActive: true,
+      },
+    });
+  }
 
-  // Mealtimes
-  const lunch = await prisma.mealtime.create({
-    data: {
-      name: 'Lunch',
-      startTime: '11:00',
-      endTime: '15:00',
-      days: [1, 2, 3, 4, 5],
-      locationId: location.id,
-    },
-  });
+  // Mealtimes (no unique key — find-or-create so re-seeding keeps stable refs)
+  const lunch =
+    (await prisma.mealtime.findFirst({ where: { locationId: location.id, name: 'Lunch' } })) ??
+    (await prisma.mealtime.create({
+      data: {
+        name: 'Lunch',
+        startTime: '11:00',
+        endTime: '15:00',
+        days: [1, 2, 3, 4, 5],
+        locationId: location.id,
+      },
+    }));
 
-  const dinner = await prisma.mealtime.create({
-    data: {
-      name: 'Dinner',
-      startTime: '17:00',
-      endTime: '22:00',
-      days: [0, 1, 2, 3, 4, 5, 6],
-      locationId: location.id,
-    },
-  });
+  const dinner =
+    (await prisma.mealtime.findFirst({ where: { locationId: location.id, name: 'Dinner' } })) ??
+    (await prisma.mealtime.create({
+      data: {
+        name: 'Dinner',
+        startTime: '17:00',
+        endTime: '22:00',
+        days: [0, 1, 2, 3, 4, 5, 6],
+        locationId: location.id,
+      },
+    }));
 
   // Categories
   const appetizers = await prisma.category.upsert({
@@ -192,8 +198,9 @@ async function main() {
     },
   });
 
-  // Caesar salad size option
-  const sizeOption = await prisma.menuOption.create({
+  // Caesar salad options (no unique key — guard so re-seeding doesn't duplicate)
+  if ((await prisma.menuOption.count({ where: { menuItemId: caesarSalad.id } })) === 0) {
+  await prisma.menuOption.create({
     data: {
       menuItemId: caesarSalad.id,
       name: 'Size',
@@ -225,6 +232,7 @@ async function main() {
       },
     },
   });
+  }
 
   const hummusTrio = await prisma.menuItem.upsert({
     where: { slug: 'hummus-trio' },
@@ -316,7 +324,8 @@ async function main() {
     },
   });
 
-  // Pizza size option
+  // Pizza options (no unique key — guard so re-seeding doesn't duplicate)
+  if ((await prisma.menuOption.count({ where: { menuItemId: margherita.id } })) === 0) {
   await prisma.menuOption.create({
     data: {
       menuItemId: margherita.id,
@@ -352,6 +361,7 @@ async function main() {
       },
     },
   });
+  }
 
   const tiramisu = await prisma.menuItem.upsert({
     where: { slug: 'tiramisu' },
@@ -519,7 +529,9 @@ async function main() {
   // Sample orders
   const orderStatuses: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PREPARING', 'READY', 'DELIVERED', 'PICKED_UP'];
   const orderTypes = ['DELIVERY', 'PICKUP'] as const;
-  for (let i = 0; i < 15; i++) {
+  // Guard so re-seeding doesn't hit the KA-SEED-* orderNumber unique constraint.
+  const existingSeedOrders = await prisma.order.count();
+  for (let i = 0; existingSeedOrders === 0 && i < 15; i++) {
     const status = orderStatuses[i % orderStatuses.length];
     const orderType = orderTypes[i % 2];
     const daysAgo = Math.floor(i / 2);
@@ -561,29 +573,33 @@ async function main() {
     });
   }
 
-  // Sample reviews
-  await prisma.review.createMany({
-    data: [
-      { customerId: customer.id, locationId: location.id, orderId: undefined, rating: 5, comment: 'Excellent food and fast delivery!', isApproved: true },
-      { customerId: customer.id, locationId: location.id, orderId: undefined, rating: 4, comment: 'Great pizza, will order again.', isApproved: true },
-      { customerId: customer.id, locationId: location.id, orderId: undefined, rating: 5, comment: 'Best restaurant in town!', isApproved: false },
-    ],
-    skipDuplicates: true,
-  });
+  // Sample reviews (no unique key — guard so re-seeding doesn't duplicate)
+  if ((await prisma.review.count()) === 0) {
+    await prisma.review.createMany({
+      data: [
+        { customerId: customer.id, locationId: location.id, orderId: undefined, rating: 5, comment: 'Excellent food and fast delivery!', isApproved: true },
+        { customerId: customer.id, locationId: location.id, orderId: undefined, rating: 4, comment: 'Great pizza, will order again.', isApproved: true },
+        { customerId: customer.id, locationId: location.id, orderId: undefined, rating: 5, comment: 'Best restaurant in town!', isApproved: false },
+      ],
+      skipDuplicates: true,
+    });
+  }
 
-  // Sample reservation
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  await prisma.reservation.create({
-    data: {
-      customerId: customer.id,
-      locationId: location.id,
-      date: tomorrow,
-      time: '19:00',
-      partySize: 4,
-      status: 'PENDING',
-    },
-  });
+  // Sample reservation (no unique key — guard so re-seeding doesn't duplicate)
+  if ((await prisma.reservation.count()) === 0) {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    await prisma.reservation.create({
+      data: {
+        customerId: customer.id,
+        locationId: location.id,
+        date: tomorrow,
+        time: '19:00',
+        partySize: 4,
+        status: 'PENDING',
+      },
+    });
+  }
 
   // Site settings
   await prisma.siteSettings.upsert({

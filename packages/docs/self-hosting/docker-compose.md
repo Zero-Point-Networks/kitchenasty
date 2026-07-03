@@ -2,6 +2,8 @@
 
 This page explains how to configure and run KitchenAsty in production using Docker Compose.
 
+> **Local development?** Use the root `docker-compose.yml` instead — see [Install with Docker](/guide/installation-docker). It includes a one-shot `migrate` service that applies migrations and seeds demo data **automatically** on `docker compose up`, so you can skip the manual migrate/seed step below. This production guide keeps migration under manual control.
+
 ## 1️⃣ Step 1: Clone the Repository
 
 ```bash
