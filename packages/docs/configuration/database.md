@@ -60,6 +60,7 @@ A production-provisioning seed at `prisma/seed-coolgardie.ts` sets up the real C
 - 👤 A Super Admin (`admin@coolgardiegoldrushmotel.com.au`, random password printed once to the console)
 - 📍 The Coolgardie location (pickup only, dinner hours 5:30–7:30 PM daily) with 10 tables and a Dinner mealtime
 - 🍽️ The full 41-item menu (9 categories) with options and allergen tags — no sample orders, reviews, coupons, or gallery images
+- 🖼️ Generated placeholder menu images copied from `prisma/seed-assets/coolgardie-menu/` into `uploads/coolgardie-menu/`
 
 Run it against a **fresh, migrated database**:
 
@@ -67,7 +68,9 @@ Run it against a **fresh, migrated database**:
 npm run db:seed:coolgardie -w packages/server
 ```
 
-It is idempotent — re-running updates branding and leaves seeded rows unchanged. It can technically run alongside the demo seed (slugs are disjoint), but two locations will then coexist; prefer a fresh database for a venue deployment.
+It is idempotent — re-running updates branding, refreshes generated placeholder image files in the runtime uploads directory, and leaves seeded rows unchanged. It can technically run alongside the demo seed (slugs are disjoint), but two locations will then coexist; prefer a fresh database for a venue deployment.
+
+The generated menu images are staging placeholders only. Replace them with venue-owned food photography through the admin menu image upload flow before go-live.
 
 ## 🔍 Prisma Studio
 
