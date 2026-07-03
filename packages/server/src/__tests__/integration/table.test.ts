@@ -322,4 +322,52 @@ describe('Table API - Integration Tests', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  // ============================================================
+  // QR TOKEN VIEW (staff, read-only — no rotation)
+  // ============================================================
+  describe('GET /api/locations/:locationId/tables/:tableId/qr', () => {
+    beforeEach(() => {
+      process.env.PUBLIC_URL = 'https://shop.example.com';
+    });
+
+    it('returns the existing qrToken and URL without rotating it', async () => {
+      mockedPrisma.table.findFirst.mockResolvedValue({ ...sampleTable, qrToken: 'tok-existing' } as any);
+
+      const res = await request(app)
+        .get('/api/locations/loc-1/tables/tbl-1/qr')
+        .set('Authorization', `Bearer ${managerToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.qrToken).toBe('tok-existing');
+      expect(res.body.data.url).toBe('https://shop.example.com/t/tok-existing');
+      // read-only: must not write
+      expect(mockedPrisma.table.update).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when the table has no QR token yet', async () => {
+      mockedPrisma.table.findFirst.mockResolvedValue({ ...sampleTable, qrToken: null } as any);
+
+      const res = await request(app)
+        .get('/api/locations/loc-1/tables/tbl-1/qr')
+        .set('Authorization', `Bearer ${managerToken}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it('returns 404 when the table does not exist', async () => {
+      mockedPrisma.table.findFirst.mockResolvedValue(null);
+
+      const res = await request(app)
+        .get('/api/locations/loc-1/tables/missing/qr')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(404);
+    });
+
+    it('requires staff authentication', async () => {
+      const res = await request(app).get('/api/locations/loc-1/tables/tbl-1/qr');
+      expect(res.status).toBe(401);
+    });
+  });
 });
