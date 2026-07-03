@@ -1,3 +1,5 @@
+import path from 'path';
+import { promises as fs } from 'fs';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 import { seedCoolgardie } from '../../../../../prisma/seed-coolgardie.js';
@@ -12,6 +14,52 @@ import { seedCoolgardie } from '../../../../../prisma/seed-coolgardie.js';
 // it cannot be sequenced safely inside this suite, and the spec keeps that
 // file untouched.
 const hasDb = Boolean(process.env.DATABASE_URL);
+const imageSubdir = 'coolgardie-menu';
+
+async function findProjectRoot(): Promise<string> {
+  let current = process.cwd();
+  while (true) {
+    try {
+      const stats = await fs.stat(path.join(current, 'prisma', 'seed-assets', imageSubdir));
+      if (stats.isDirectory()) return current;
+    } catch {
+      // Keep walking toward the filesystem root.
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) throw new Error(`project root not found from ${process.cwd()}`);
+    current = parent;
+  }
+}
+
+async function expectGeneratedMenuImages(prisma: PrismaClient, locationId: string): Promise<void> {
+  const projectRoot = await findProjectRoot();
+  const sourceDir = path.join(projectRoot, 'prisma', 'seed-assets', imageSubdir);
+  const uploadDirs = [
+    process.env.UPLOADS_DIR ? path.join(path.resolve(process.env.UPLOADS_DIR), imageSubdir) : null,
+    path.resolve(process.cwd(), 'uploads', imageSubdir),
+    path.join(projectRoot, 'uploads', imageSubdir),
+    path.join(projectRoot, 'packages', 'server', 'uploads', imageSubdir),
+  ].filter((dir): dir is string => Boolean(dir));
+
+  const items = await prisma.menuItem.findMany({
+    where: { locationId },
+    select: { slug: true, image: true },
+  });
+
+  expect(items).toHaveLength(41);
+  for (const item of items) {
+    const filename = `${item.slug}.webp`;
+    const source = await fs.stat(path.join(sourceDir, filename));
+    expect(source.size).toBeGreaterThan(0);
+    expect(item.image).toBe(`/uploads/${imageSubdir}/${filename}`);
+
+    for (const uploadDir of uploadDirs) {
+      const copied = await fs.stat(path.join(uploadDir, filename));
+      expect(copied.size).toBe(source.size);
+    }
+  }
+}
 
 describe.skipIf(!hasDb)('Coolgardie venue seed - Integration Tests', () => {
   let prisma: PrismaClient;
@@ -92,6 +140,10 @@ describe.skipIf(!hasDb)('Coolgardie venue seed - Integration Tests', () => {
     it('creates 41 menu items for the location', async () => {
       const count = await prisma.menuItem.count({ where: { locationId } });
       expect(count).toBe(41);
+    });
+
+    it('sets generated placeholder image paths and copies files for every menu item', async () => {
+      await expectGeneratedMenuImages(prisma, locationId);
     });
 
     it('files items under their primary category (PDF cross-listings ignored)', async () => {
@@ -180,6 +232,22 @@ describe.skipIf(!hasDb)('Coolgardie venue seed - Integration Tests', () => {
   });
 
   describe('idempotency', () => {
+    it('does not overwrite venue-uploaded menu item images on re-run', async () => {
+      const slug = 'grilled-sirloin-steak';
+      const venueImage = '/uploads/venue-owned/grilled-sirloin-steak.jpg';
+      const placeholderImage = `/uploads/${imageSubdir}/${slug}.webp`;
+
+      try {
+        await prisma.menuItem.update({ where: { slug }, data: { image: venueImage } });
+        await seedCoolgardie(prisma);
+
+        const item = await prisma.menuItem.findUnique({ where: { slug } });
+        expect(item?.image).toBe(venueImage);
+      } finally {
+        await prisma.menuItem.update({ where: { slug }, data: { image: placeholderImage } });
+      }
+    });
+
     it('re-running the seed leaves seeded row counts unchanged', async () => {
       const snapshot = async (): Promise<Record<string, number>> => ({
         categories: await prisma.category.count({ where: { locationId } }),
@@ -200,6 +268,7 @@ describe.skipIf(!hasDb)('Coolgardie venue seed - Integration Tests', () => {
       await seedCoolgardie(prisma);
       const after = await snapshot();
       expect(after).toEqual(before);
+      await expectGeneratedMenuImages(prisma, locationId);
     });
   });
 });

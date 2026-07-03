@@ -1,4 +1,6 @@
 import { randomBytes } from 'crypto';
+import path from 'path';
+import { promises as fs } from 'fs';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -12,6 +14,8 @@ import bcrypt from 'bcryptjs';
 // Run with: npm run db:seed:coolgardie -w packages/server
 
 const ADMIN_EMAIL = 'admin@coolgardiegoldrushmotel.com.au';
+const MENU_IMAGE_UPLOAD_SUBDIR = 'coolgardie-menu';
+const MENU_IMAGE_EXTENSION = '.webp';
 
 const coolgardieSettings = {
   siteName: 'Coolgardie Gold Rush Motel',
@@ -279,6 +283,123 @@ const TABLE_CAPACITIES = [4, 4, 4, 4, 4, 4, 6, 6, 6, 2];
 
 const ALLERGEN_NAMES = ['Gluten', 'Dairy', 'Nuts', 'Eggs', 'Soy', 'Shellfish', 'Fish', 'Sesame'];
 
+interface CoolgardieAssetPaths {
+  projectRoot: string;
+  sourceDir: string;
+}
+
+function menuImageUrl(slug: string): string {
+  return `/uploads/${MENU_IMAGE_UPLOAD_SUBDIR}/${slug}${MENU_IMAGE_EXTENSION}`;
+}
+
+function menuItemSlugs(): string[] {
+  return menu.flatMap((category) => category.items.map((item) => item.slug));
+}
+
+function isCoolgardiePlaceholderImage(image: string | null): boolean {
+  return image?.startsWith(`/uploads/${MENU_IMAGE_UPLOAD_SUBDIR}/`) ?? false;
+}
+
+async function findCoolgardieAssetPaths(): Promise<CoolgardieAssetPaths> {
+  let current = process.cwd();
+
+  while (true) {
+    const candidate = path.join(current, 'prisma', 'seed-assets', MENU_IMAGE_UPLOAD_SUBDIR);
+    try {
+      const stats = await fs.stat(candidate);
+      if (stats.isDirectory()) {
+        return { projectRoot: current, sourceDir: candidate };
+      }
+    } catch {
+      // Keep walking toward the filesystem root.
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      throw new Error(`Could not find prisma/seed-assets/${MENU_IMAGE_UPLOAD_SUBDIR} from ${process.cwd()}`);
+    }
+    current = parent;
+  }
+}
+
+function menuImageUploadDirs(projectRoot: string): string[] {
+  const candidates = [
+    process.env.UPLOADS_DIR ? path.join(path.resolve(process.env.UPLOADS_DIR), MENU_IMAGE_UPLOAD_SUBDIR) : null,
+    path.resolve(process.cwd(), 'uploads', MENU_IMAGE_UPLOAD_SUBDIR),
+    path.join(projectRoot, 'uploads', MENU_IMAGE_UPLOAD_SUBDIR),
+    path.join(projectRoot, 'packages', 'server', 'uploads', MENU_IMAGE_UPLOAD_SUBDIR),
+  ];
+
+  return [...new Set(candidates.filter((candidate): candidate is string => Boolean(candidate)))];
+}
+
+async function copyMenuImagesToUploads(): Promise<void> {
+  const { projectRoot, sourceDir } = await findCoolgardieAssetPaths();
+  const slugs = menuItemSlugs();
+  const expectedFiles = new Set(slugs.map((slug) => `${slug}${MENU_IMAGE_EXTENSION}`));
+  const sourceFiles = (await fs.readdir(sourceDir)).filter((file) => file.endsWith(MENU_IMAGE_EXTENSION));
+  const missing = [...expectedFiles].filter((file) => !sourceFiles.includes(file));
+  const extra = sourceFiles.filter((file) => !expectedFiles.has(file));
+
+  if (missing.length > 0 || extra.length > 0) {
+    throw new Error(
+      [
+        `Coolgardie menu image assets must match the ${slugs.length} seeded item slugs.`,
+        missing.length > 0 ? `Missing: ${missing.join(', ')}` : null,
+        extra.length > 0 ? `Extra: ${extra.join(', ')}` : null,
+      ]
+        .filter(Boolean)
+        .join(' ')
+    );
+  }
+
+  for (const uploadDir of menuImageUploadDirs(projectRoot)) {
+    await fs.mkdir(uploadDir, { recursive: true });
+    for (const slug of slugs) {
+      const filename = `${slug}${MENU_IMAGE_EXTENSION}`;
+      await fs.copyFile(path.join(sourceDir, filename), path.join(uploadDir, filename));
+    }
+  }
+}
+
+async function upsertMenuItemWithPlaceholder(
+  prisma: PrismaClient,
+  itemData: SeedMenuItem,
+  categoryId: string,
+  locationId: string,
+  sortOrder: number
+): Promise<{ id: string }> {
+  const existing = await prisma.menuItem.findUnique({
+    where: { slug: itemData.slug },
+    select: { id: true, image: true },
+  });
+
+  if (existing) {
+    if (existing.image === null || isCoolgardiePlaceholderImage(existing.image)) {
+      return prisma.menuItem.update({
+        where: { id: existing.id },
+        data: { image: menuImageUrl(itemData.slug) },
+        select: { id: true },
+      });
+    }
+    return { id: existing.id };
+  }
+
+  return prisma.menuItem.create({
+    data: {
+      name: itemData.name,
+      slug: itemData.slug,
+      description: itemData.description ?? null,
+      price: itemData.price,
+      image: menuImageUrl(itemData.slug),
+      categoryId,
+      locationId,
+      sortOrder,
+    },
+    select: { id: true },
+  });
+}
+
 async function seedAdminUser(prisma: PrismaClient): Promise<void> {
   const existing = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
   if (existing) {
@@ -388,19 +509,7 @@ async function seedMenu(prisma: PrismaClient, locationId: string, dinnerId: stri
 
     for (let i = 0; i < categoryData.items.length; i++) {
       const itemData = categoryData.items[i];
-      const item = await prisma.menuItem.upsert({
-        where: { slug: itemData.slug },
-        update: {},
-        create: {
-          name: itemData.name,
-          slug: itemData.slug,
-          description: itemData.description ?? null,
-          price: itemData.price,
-          categoryId: category.id,
-          locationId,
-          sortOrder: i + 1,
-        },
-      });
+      const item = await upsertMenuItemWithPlaceholder(prisma, itemData, category.id, locationId, i + 1);
 
       const optionGroups = optionsBySlug[itemData.slug];
       if (optionGroups) {
@@ -432,6 +541,7 @@ async function seedMenu(prisma: PrismaClient, locationId: string, dinnerId: stri
 export async function seedCoolgardie(prisma: PrismaClient): Promise<void> {
   console.log('Seeding Coolgardie Gold Rush Motel...');
 
+  await copyMenuImagesToUploads();
   await seedAdminUser(prisma);
 
   // Full-overwrite update (unlike the demo seed's `update: {}`) so venue
