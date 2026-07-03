@@ -172,6 +172,15 @@ Add a root `docker:dev` script for discoverability:
 
 > **Session notes**: `scripts/smoke.sh` (executable, `bash -n` clean) checks health, storefront, admin, seeded menu, and `by-token/dev-table-1-qr`. `installation-docker.md` rewritten: config is now optional (root `.env`), migrations+seed run automatically (**removed the previously-broken manual `docker compose exec server npx prisma/tsx` step — that CLI isn't in the `--omit=dev` runtime image**), added `PUBLIC_URL`, docs port 5175, and a smoke-test step. `self-hosting/docker-compose.md` got a callout pointing local-dev users to the auto-migrate flow (prod guide keeps manual migration; prod fix is out of scope).
 
+### Phase 4: Runtime-verification fixes ✅
+<!-- packages: server -->
+
+Surfaced by the first real `docker compose up` (the migrate service ran cleanly — migrations + seed exit 0 — but the server then crashed):
+
+- [x] **T4.1** Fix server crash `unable to determine transport target for "pino-pretty"` — `pino-pretty` is a dev-only dependency absent from the `--omit=dev` runtime image, but `lib/logger.ts` used it as a transport whenever `NODE_ENV !== production` (compose sets `development`). Now the pretty transport is used only when `pino-pretty` actually resolves; otherwise it falls back to pino's JSON output. `[server]` `[~12 LOC]`
+
+> **Session notes**: Pre-existing latent bug exposed by the stack actually booting for the first time. Guarding on `require.resolve('pino-pretty')` fixes any `--omit=dev` non-production deployment (not just Docker) and keeps the runtime image lean (no need to promote `pino-pretty` to a prod dependency). Local dev (`npm run dev:server`, full deps) still gets pretty logs. 306 tests pass; server type-check clean. Requires a `docker compose up --build` (server image rebuild) to pick up.
+
 ## Testing Strategy
 
 This is infrastructure; verification is smoke-testing the running stack rather than unit tests.
@@ -215,6 +224,7 @@ Optional but recommended: run the existing Playwright suite against the dockeriz
 | File | Change |
 |------|--------|
 | `packages/server/package.json` | Add `db:deploy` script |
+| `packages/server/src/lib/logger.ts` | Use `pino-pretty` transport only when it resolves (fixes crash in `--omit=dev` image) — finalize |
 | `prisma/seed.ts` | Make re-run-safe (orders `skipDuplicates`/count-guard; guard zones/mealtimes/reservations) |
 | `docker-compose.yml` | `migrate` service; server `depends_on` + healthcheck + `PUBLIC_URL`; `admin`/`storefront` wait for healthy server; `${VAR:-default}` secrets (incl. `DATABASE_URL` password) |
 | `.env.example` | **NEW** — documented dev env vars |
