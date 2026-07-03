@@ -42,11 +42,31 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | null>(null);
 
 let nextId = 1;
+const DINE_IN_KEY = 'kitchenasty.dineIn';
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [dineIn, setDineIn] = useState<DineInContext | null>(null);
+  const [dineIn, setDineInState] = useState<DineInContext | null>(() => {
+    try {
+      const raw = sessionStorage.getItem(DINE_IN_KEY);
+      return raw ? (JSON.parse(raw) as DineInContext) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Write-through wrapper so the dine-in table binding survives a page refresh
+  // or reopening the QR link (per-tab sessionStorage).
+  const setDineIn = useCallback((ctx: DineInContext | null) => {
+    setDineInState(ctx);
+    try {
+      if (ctx) sessionStorage.setItem(DINE_IN_KEY, JSON.stringify(ctx));
+      else sessionStorage.removeItem(DINE_IN_KEY);
+    } catch {
+      /* storage unavailable — degrade to in-memory */
+    }
+  }, []);
 
   const addItem = useCallback((item: Omit<CartItem, 'id'>) => {
     setItems((prev) => [...prev, { ...item, id: String(nextId++) }]);
@@ -67,8 +87,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clear = useCallback(() => {
     setItems([]);
-    setDineIn(null);
-  }, []);
+    setDineIn(null); // wrapper → also clears sessionStorage
+  }, [setDineIn]);
 
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
 

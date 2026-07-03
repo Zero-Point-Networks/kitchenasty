@@ -167,6 +167,10 @@
     "invalidBody": "This QR code isn't valid or the table is no longer active. You can still browse the menu.",
     "browseMenu": "Browse Menu"
   },
+  "dineInBanner": {
+    "ordering": "Ordering for",
+    "leave": "Leave table"
+  },
   "orderConfirmation": {
     "title": "Order Placed!",
     "thankYou": "Thank you for your order.",
