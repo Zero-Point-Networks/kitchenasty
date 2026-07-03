@@ -1,6 +1,6 @@
+import { randomBytes } from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
 
 // Venue seed for the Coolgardie Gold Rush Motel restaurant.
 // Source: https://www.coolgardiegoldrushmotel.com.au/restaurant-coolgardie
