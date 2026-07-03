@@ -222,6 +222,8 @@ Optional but recommended: run the existing Playwright suite against the dockeriz
 | `scripts/smoke.sh` | **NEW** — post-up smoke checks |
 | `packages/docs/guide/installation-docker.md` | Update local Docker quickstart |
 | `packages/docs/self-hosting/docker-compose.md` | Note dev `migrate` service vs prod flow |
+| `README.md` | Fix quickstart (`up -d postgres` for hot-reload; full-stack pointer) — docs-reviewer |
+| `packages/docs/configuration/environment-variables.md` | Document `PUBLIC_URL` — docs-reviewer |
 
 ## Documentation Impact
 

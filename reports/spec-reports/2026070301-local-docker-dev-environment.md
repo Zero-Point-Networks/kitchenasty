@@ -1,6 +1,17 @@
 # Spec Report — Local Docker Dev Environment
 
 Date: 3 July 2026 | Session: interactive
+Updated: 3 July 2026 | `/wf:finalize` — deep audit (no fixes needed)
+
+## Finalization (3 July 2026)
+
+Read every implementation file end-to-end. **No bugs, gaps, or edge cases found.** Verified exhaustively that the seed is re-run-safe: all 10 `prisma.*.create()` calls are guarded (count-checks, find-or-create, or the orders loop condition), and both `createMany` calls (`menuItemAllergen`, `menuItemMealtime`) carry `skipDuplicates: true` over composite primary keys. `docker-compose.yml`, `scripts/smoke.sh`, and the `db:deploy` script are correct. Regression check: the removed manual-migrate doc step was broken (improvement, not a loss); the README `up -d` → `up -d postgres` change fixes a pre-existing hot-reload port conflict.
+
+Post-finalization: 306 tests pass; seed `tsc`, `bash -n`, and `docker compose config` all clean. The runtime path (`docker compose up` + smoke) still requires a machine with Docker daemon access — the operator is running it out-of-band.
+
+---
+
+Date: 3 July 2026 | Session: interactive
 
 ## What Was Delivered
 
