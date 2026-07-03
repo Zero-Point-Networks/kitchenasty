@@ -226,7 +226,7 @@ The generated images are intentionally generic, clean food photography placehold
 ### Phase 4: Generated placeholder menu imagery
 <!-- depends: Verification and docs | packages: server, docs -->
 
-- [ ] **T4.1** Generate one placeholder food image for each of the 41 Coolgardie menu item slugs and commit the source assets under `prisma/seed-assets/coolgardie-menu/` `[server]` `[41 files]`
+- [ ] **T4.1** Generate 41 placeholder food image files, one for each Coolgardie menu item slug, and commit the source assets under `prisma/seed-assets/coolgardie-menu/` `[server]` `[~0 LOC]`
 - [ ] **T4.2** Update `prisma/seed-coolgardie.ts` so `seedCoolgardie()` copies tracked source assets into `uploads/coolgardie-menu/` and seeds each `MenuItem.image` to `/uploads/coolgardie-menu/{slug}.webp` `[server]` `[~45 LOC]` — depends: T4.1
 - [ ] **T4.3** Extend `packages/server/src/__tests__/integration/seed-coolgardie.test.ts` to assert every seeded Coolgardie item has a generated image path and the seed remains idempotent with images populated `[server]` `[~20 LOC]` — depends: T4.2
 - [ ] **T4.4** Update docs/CHANGELOG to note that the Coolgardie seed includes generated placeholder menu imagery copied into runtime uploads `[docs]` `[~10 LOC]` — depends: T4.2
