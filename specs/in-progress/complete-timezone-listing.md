@@ -1,6 +1,6 @@
 # Complete Timezone Listing
 
-## Status: Draft
+## Status: In Progress
 
 ## Objective
 
@@ -8,7 +8,7 @@ Replace the admin General Settings timezone dropdown's small hard-coded sample w
 
 ## Problem Statement
 
-1. **The admin list is incomplete** - `packages/admin/src/pages/SettingsGeneral.tsx:4` defines only 18 timezone values, so common restaurant timezones such as `Australia/Perth` are not selectable even though the database seed already uses that value in `prisma/seed-coolgardie.ts:59`.
+1. **The admin list is incomplete** - `packages/admin/src/pages/SettingsGeneral.tsx:4` defines only 18 timezone values, so common restaurant timezones such as `Australia/Perth` are not selectable.
 2. **The current order is manually curated** - `packages/admin/src/pages/SettingsGeneral.tsx:4-9` mixes regions in a fixed hand-written order rather than deriving an alphabetical region order from IANA identifiers.
 3. **The API accepts arbitrary timezone strings** - `packages/server/src/controllers/settings.controller.ts:171-180` validates `timezone` as an optional string, so the missing list is a client-side admin UI limitation rather than a backend schema limitation.
 
@@ -66,12 +66,16 @@ Update `packages/docs/features/settings.md` to make the General Settings timezon
 ### Phase 1: Admin Timezone Picker
 <!-- packages: admin, docs -->
 
-- [ ] **T1.1** Replace the hard-coded `TIMEZONES` array in `SettingsGeneral.tsx` with a browser-supported IANA timezone builder and region/name comparator `[admin]` `[~35 LOC]`
-- [ ] **T1.2** Preserve the loaded timezone as an option when it is absent from the generated list `[admin]` `[~10 LOC]` - depends: T1.1
-- [ ] **T1.3** Add Playwright coverage for `/settings/general` asserting the select contains `Australia/Perth`, includes a broad list, and is region-sorted `[admin]` `[~45 LOC]` - depends: T1.1, T1.2
-- [ ] **T1.4** Update settings feature documentation to mention the complete browser-supported IANA picker ordered by region `[docs]` `[~5 LOC]`
+- [x] **T1.1** Replace the hard-coded `TIMEZONES` array in `SettingsGeneral.tsx` with a browser-supported IANA timezone builder and region/name comparator `[admin]` `[~35 LOC]`
+- [x] **T1.2** Preserve the loaded timezone as an option when it is absent from the generated list `[admin]` `[~10 LOC]` depends: T1.1
+- [x] **T1.3** Add Playwright coverage for `/settings/general` asserting the select contains `Australia/Perth`, includes a broad list, preserves an unknown loaded timezone, and is region-sorted `[admin]` `[~55 LOC]` depends: T1.1, T1.2
+- [x] **T1.4** Update settings feature documentation to mention the complete browser-supported IANA picker ordered by region `[docs]` `[~5 LOC]`
 
-Tasks T1.3 and T1.4 can run in parallel after T1.1 and T1.2.
+> **Session notes**: Implemented the timezone option builder in `packages/admin/src/pages/SettingsGeneral.tsx`, including deterministic region/name sorting, `UTC`, browser-supported IANA zones, and preservation of unknown stored values.
+> Added `e2e/admin/settings-general.spec.ts` with browser-derived expected options for completeness, ordering, and unknown-value preservation; updated `packages/docs/features/settings.md`.
+> Verification: `npm run build -w packages/admin` passed. `npx playwright test e2e/admin/settings-general.spec.ts --project=admin` is blocked locally by missing Playwright Chromium, and `npx playwright install chromium` reports unsupported `ubuntu26.04-x64`. `npm run lint` is blocked by the repo's missing ESLint config.
+
+Task T1.4 has no code dependency and can run in parallel with the admin implementation.
 
 ## Testing Strategy
 
@@ -83,7 +87,7 @@ No unit tests are configured for `@kitchenasty/admin`; the package currently exp
 
 | Test File | What It Tests |
 |-----------|--------------|
-| `e2e/admin/settings-general.spec.ts` | **NEW** Playwright spec visiting `/settings/general`, reading the Timezone select options, and asserting `Australia/Perth` is present, the option count is large enough to catch regression to the current 18-item list, and the first comparable region transitions are alphabetically sorted |
+| `e2e/admin/settings-general.spec.ts` | **NEW** Playwright spec visiting `/settings/general`, reading the Timezone select options, and asserting `Australia/Perth` is present, the option count is large enough to catch regression to the current 18-item list, unknown API-loaded values remain selectable, and the first comparable region transitions are alphabetically sorted |
 
 ### Verification Commands
 
@@ -115,4 +119,4 @@ No unit tests are configured for `@kitchenasty/admin`; the package currently exp
 
 ## Documentation Impact
 
-- [ ] `packages/docs/features/settings.md` - update the timezone field description for the complete region-ordered picker
+- [x] `packages/docs/features/settings.md` - update the timezone field description for the complete region-ordered picker
