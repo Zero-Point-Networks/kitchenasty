@@ -140,14 +140,21 @@ This directly fixes the "scan just goes to the menu with no feedback" confusion.
 <!-- packages: storefront -->
 <!-- Independent of Phases 1-2 (client-only) — can be worked in parallel. -->
 
-- [ ] **T3.1** Persist `dineIn` to `sessionStorage` in `CartContext.tsx` (hydrate on init, write-through on set, remove on clear) `[storefront]` `[~20 LOC]`
-- [ ] **T3.2** `DineInBanner` component rendered in `Layout.tsx`; shows "Ordering for {tableName}" + "Leave table"; i18n keys in `en.json` `[storefront]` `[~40 LOC]` — depends: T3.1
+- [x] **T3.1** Persist `dineIn` to `sessionStorage` in `CartContext.tsx` (hydrate on init, write-through on set, remove on clear) `[storefront]` `[~20 LOC]`
+- [x] **T3.2** `DineInBanner` component rendered in `Layout.tsx`; shows "Ordering for {tableName}" + "Leave table"; i18n keys in `en.json` `[storefront]` `[~40 LOC]` — depends: T3.1
+
+> **Session notes**: `CartContext` now hydrates `dineIn` from `sessionStorage` (lazy init, try/catch) and write-throughs via a `setDineIn` wrapper; `clear()` calls the wrapper so the key is removed on order placement. New `DineInBanner` (default export, `useCart`) renders "Ordering for **{tableName}**" + a "Leave table" action (`setDineIn(null)`, keeps the cart), or nothing when not dine-in; mounted in `Layout` under `<Header/>`. i18n keys `dineInBanner.ordering/leave` in `en.json` (other locales fall back to en). Storefront `tsc -b` clean.
 
 ### Phase 4: Tests & docs
 <!-- depends: Storefront — visible & durable dine-in context | packages: storefront, docs -->
 
-- [ ] **T4.1** Extend `e2e/storefront/dine-in.spec.ts`: after visiting `/t/dev-table-1-qr`, the "Ordering for Table 1" banner is visible on `/menu` `[storefront]` `[~20 LOC]` — depends: T3.2
-- [ ] **T4.2** Update `packages/docs/features/qr-ordering.md`: admins can View a table's QR without regenerating; note the on-screen dine-in banner `[docs]` `[~15 LOC]` — depends: T2.1, T3.2
+- [x] **T4.1** Extend `e2e/storefront/dine-in.spec.ts`: after visiting `/t/dev-table-1-qr`, the "Ordering for Table 1" banner is visible on `/menu` `[storefront]` `[~20 LOC]` — depends: T3.2
+- [x] **T4.2** Update `packages/docs/features/qr-ordering.md`: admins can View a table's QR without regenerating; note the on-screen dine-in banner `[docs]` `[~15 LOC]` — depends: T2.1, T3.2
+
+> **Session notes**: e2e adds a "persistent dine-in banner" test (banner visible on `/menu` after scan + survives reload). Docs: updated How-it-works (banner), the QR admin actions (View vs Generate; Regenerate moved into the modal), and added the read-only `GET .../qr` to the API reference. E2E requires a running stack; not executed here. Full suite: **310 tests pass**; server/admin/storefront type-check clean.
+
+### Environment note
+> Developed in a dedicated **git worktree** (`/home/russell/kitchenasty-qrux`) after a second concurrent session switched the shared main working tree mid-Phase-3. Phases 1-2 were already committed/pushed; Phases 3-4 completed in the isolated worktree. No work lost.
 
 ## Testing Strategy
 

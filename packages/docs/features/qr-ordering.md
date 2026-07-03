@@ -5,7 +5,7 @@ Diners scan a per-table QR code to open the menu pre-bound to their table, order
 ## How it works
 
 1. An admin generates a QR code for each table (see below). Each code encodes an opaque, rotatable token in a storefront URL: `https://<your-storefront>/t/<token>`.
-2. A diner scans the code. The storefront resolves the token, binds the session to that table, and opens the menu.
+2. A diner scans the code. The storefront resolves the token, binds the session to that table, and opens the menu. A persistent **"Ordering for {table}"** banner is shown site-wide so the diner can see the scan took effect; it survives a page refresh and offers a **Leave table** action.
 3. The diner builds an order and checks out as a **dine-in** order. No delivery address is required, and a guest can order anonymously.
 4. At checkout the diner chooses **Pay at Counter** (the order is placed unpaid; staff settle it later) or an enabled online method.
 5. The order appears in the admin order list and Kitchen Display with its table.
@@ -16,11 +16,11 @@ Dine-in is gated by the `dineInEnabled` flag in **Order Settings** (`orderSettin
 
 ## Generating & printing table QR codes
 
-In the admin app, open **Locations → (a location) → Tables**. Each table row has a **Generate QR** action:
+In the admin app, open **Locations → (a location) → Tables**. Each table row has a QR action:
 
-- **Generate QR** creates the table's code and opens a printable QR modal.
-- **Regenerate QR** rotates the token. ⚠️ This **invalidates any previously printed code** for that table — reprint and replace it.
-- **Print** opens a print-friendly view (table name + QR) to print and place on the table.
+- **Generate QR** (shown when a table has no code yet) creates the table's code and opens the QR modal.
+- **View QR** (shown once a code exists) opens the modal for the **existing** code **without** rotating it — so you can re-view or reprint safely.
+- Inside the modal, **Print** opens a print-friendly view (table name + QR), and **Regenerate** rotates the token. ⚠️ Regenerating **invalidates any previously printed code** for that table — reprint and replace it.
 
 ## Order type & payment
 
@@ -50,6 +50,15 @@ Authorization: Bearer <staff-token>
 ```
 
 Returns `{ qrToken, url }` where `url` is the storefront link the QR encodes (built from `PUBLIC_URL`).
+
+**View a table's existing QR token** (staff — read-only, no rotation):
+
+```
+GET /api/locations/:locationId/tables/:tableId/qr
+Authorization: Bearer <staff-token>
+```
+
+Returns `{ qrToken, url }`, or `404` if the table has no code yet. Use this to re-view/reprint a code without invalidating it.
 
 **Create a dine-in order**: `POST /api/orders` with `orderType: "DINE_IN"` and `tableToken: "<qrToken>"`. See [Ordering](/features/ordering) for the full order payload.
 

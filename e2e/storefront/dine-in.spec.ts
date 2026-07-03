@@ -20,4 +20,15 @@ test.describe('Storefront Dine-in (QR ordering)', () => {
     await expect(page).toHaveURL(/\/menu/);
     await expect(page.getByRole('heading', { name: 'Our Menu' })).toBeVisible();
   });
+
+  test('a persistent dine-in banner shows the table after scanning', async ({ page }) => {
+    await page.goto('/t/dev-table-1-qr');
+    await expect(page).toHaveURL(/\/menu/);
+    // The site-wide banner names the table on the menu (and every page).
+    await expect(page.getByText(/Ordering for/)).toBeVisible();
+    await expect(page.getByText('Table 1')).toBeVisible();
+    // The dine-in context survives a reload (sessionStorage-backed).
+    await page.reload();
+    await expect(page.getByText(/Ordering for/)).toBeVisible();
+  });
 });
