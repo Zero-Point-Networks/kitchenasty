@@ -204,4 +204,4 @@ Admin (`TableList`) has no unit-test runner in the repo; covered by `tsc -b` + m
 
 ## Documentation Impact
 
-- [ ] `packages/docs/features/qr-ordering.md` — admins can view a table's QR without regenerating; diners see a persistent "Ordering for {table}" banner
+- [x] `packages/docs/features/qr-ordering.md` — admins can view a table's QR without regenerating; diners see a persistent "Ordering for {table}" banner
