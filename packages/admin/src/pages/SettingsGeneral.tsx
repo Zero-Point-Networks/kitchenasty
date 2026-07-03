@@ -1,12 +1,72 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 
-const TIMEZONES = [
+const FALLBACK_TIMEZONES = [
   'UTC', 'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
   'America/Anchorage', 'Pacific/Honolulu', 'Europe/London', 'Europe/Berlin', 'Europe/Paris',
   'Europe/Rome', 'Europe/Madrid', 'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata',
   'Asia/Dubai', 'Australia/Sydney', 'Pacific/Auckland',
 ];
+
+type SupportedValuesIntl = typeof Intl & {
+  supportedValuesOf?: (key: 'timeZone') => string[];
+};
+
+interface GeneralSettingsData {
+  contactEmail?: unknown;
+  contactPhone?: unknown;
+  timezone?: unknown;
+  distanceUnit?: unknown;
+  defaultCurrency?: unknown;
+  currencySymbol?: unknown;
+  currencyPosition?: unknown;
+  googleMapsApiKey?: unknown;
+}
+
+interface GeneralSettingsResponse {
+  success?: boolean;
+  data?: GeneralSettingsData;
+}
+
+function isDistanceUnit(value: unknown): value is 'km' | 'mi' {
+  return value === 'km' || value === 'mi';
+}
+
+function isCurrencyPosition(value: unknown): value is 'before' | 'after' {
+  return value === 'before' || value === 'after';
+}
+
+function timezoneParts(timezone: string): [string, string] {
+  const [region, ...rest] = timezone.split('/');
+  return [region, rest.join('/')];
+}
+
+function compareTimezones(a: string, b: string): number {
+  const [aRegion, aName] = timezoneParts(a);
+  const [bRegion, bName] = timezoneParts(b);
+  return compareAscii(aRegion, bRegion) || compareAscii(aName, bName) || compareAscii(a, b);
+}
+
+function compareAscii(a: string, b: string): number {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+function getSupportedTimezones(): string[] {
+  const supportedValuesOf = (Intl as SupportedValuesIntl).supportedValuesOf;
+  if (typeof supportedValuesOf !== 'function') {
+    return FALLBACK_TIMEZONES;
+  }
+
+  return supportedValuesOf.call(Intl, 'timeZone');
+}
+
+function buildTimezoneOptions(currentTimezone: string): string[] {
+  return Array.from(new Set(['UTC', ...getSupportedTimezones(), currentTimezone]))
+    .filter(Boolean)
+    .sort(compareTimezones);
+}
 
 export default function SettingsGeneral() {
   const token = localStorage.getItem('token') || '';
@@ -23,25 +83,41 @@ export default function SettingsGeneral() {
   const [currencySymbol, setCurrencySymbol] = useState('$');
   const [currencyPosition, setCurrencyPosition] = useState<'before' | 'after'>('before');
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
+  const timezoneOptions = useMemo(() => buildTimezoneOptions(timezone), [timezone]);
 
   useEffect(() => {
-    fetch('/api/settings/general', { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((res) => {
+    let active = true;
+
+    async function loadGeneralSettings(): Promise<void> {
+      try {
+        const response = await fetch('/api/settings/general', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await response.json() as GeneralSettingsResponse;
+
+        if (!active) return;
+
         if (res.success && res.data) {
           const d = res.data;
-          if (d.contactEmail) setContactEmail(d.contactEmail);
-          if (d.contactPhone) setContactPhone(d.contactPhone);
-          if (d.timezone) setTimezone(d.timezone);
-          if (d.distanceUnit) setDistanceUnit(d.distanceUnit);
-          if (d.defaultCurrency) setDefaultCurrency(d.defaultCurrency);
-          if (d.currencySymbol) setCurrencySymbol(d.currencySymbol);
-          if (d.currencyPosition) setCurrencyPosition(d.currencyPosition);
-          if (d.googleMapsApiKey) setGoogleMapsApiKey(d.googleMapsApiKey);
+          if (typeof d.contactEmail === 'string') setContactEmail(d.contactEmail);
+          if (typeof d.contactPhone === 'string') setContactPhone(d.contactPhone);
+          if (typeof d.timezone === 'string') setTimezone(d.timezone);
+          if (isDistanceUnit(d.distanceUnit)) setDistanceUnit(d.distanceUnit);
+          if (typeof d.defaultCurrency === 'string') setDefaultCurrency(d.defaultCurrency);
+          if (typeof d.currencySymbol === 'string') setCurrencySymbol(d.currencySymbol);
+          if (isCurrencyPosition(d.currencyPosition)) setCurrencyPosition(d.currencyPosition);
+          if (typeof d.googleMapsApiKey === 'string') setGoogleMapsApiKey(d.googleMapsApiKey);
         }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      } catch {
+        if (active) setError('Failed to load general settings');
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void loadGeneralSettings();
+
+    return () => {
+      active = false;
+    };
   }, [token]);
 
   async function handleSave() {
@@ -98,9 +174,9 @@ export default function SettingsGeneral() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-          <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
-            {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+          <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
+          <select id="timezone" value={timezone} onChange={(e) => setTimezone(e.target.value)} className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+            {timezoneOptions.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
           </select>
         </div>
 
