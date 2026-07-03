@@ -186,29 +186,35 @@ The 8 standard allergens are upserted (same list as the demo seed). Only unambig
 ### Phase 1: Seed scaffold, branding, location
 <!-- packages: server -->
 
-- [ ] **T1.1** Create `prisma/seed-coolgardie.ts` with exported `seedCoolgardie(prisma)` + CLI entry (`main()`, error handling, `$disconnect`), seeding the admin user `[server]` `[~50 LOC]`
-- [ ] **T1.2** Seed `SiteSettings` upsert with full-overwrite `update` payload (branding, hero/features/CTA, general/order/reservation settings) `[server]` `[~80 LOC]` — depends: T1.1
-- [ ] **T1.3** Seed `Location` (slug `coolgardie`), operating hours 17:30–19:30 daily, Dinner mealtime, 10 tables (~45 seats; no QR token — schema has no `qrToken` field until qr-ordering lands) `[server]` `[~60 LOC]` — depends: T1.1
-- [ ] **T1.4** Add `db:seed:coolgardie` script to `packages/server/package.json` `[server]` `[~2 LOC]`
+- [x] **T1.1** Create `prisma/seed-coolgardie.ts` with exported `seedCoolgardie(prisma)` + CLI entry (`main()`, error handling, `$disconnect`), seeding the admin user `[server]` `[~50 LOC]`
+- [x] **T1.2** Seed `SiteSettings` upsert with full-overwrite `update` payload (branding, hero/features/CTA, general/order/reservation settings) `[server]` `[~80 LOC]` — depends: T1.1
+- [x] **T1.3** Seed `Location` (slug `coolgardie`), operating hours 17:30–19:30 daily, Dinner mealtime, 10 tables (~45 seats; no QR token — schema has no `qrToken` field until qr-ordering lands) `[server]` `[~60 LOC]` — depends: T1.1
+- [x] **T1.4** Add `db:seed:coolgardie` script to `packages/server/package.json` `[server]` `[~2 LOC]`
 
 (T1.2, T1.3, T1.4 are parallelisable after T1.1.)
+
+> **Session notes (2026-07-03)**: `prisma/seed-coolgardie.ts` created with `seedCoolgardie(prisma)` split into `seedAdminUser`/`seedLocation`/`seedDinnerMealtime`/`seedMenu` helpers. CLI entry guarded by `process.argv[1]?.includes('seed-coolgardie')` — the repo is CJS-default so `import.meta` guards are unavailable, and the guard keeps the CLI from firing when tests import the module. Admin password is randomly generated (`randomBytes(9).toString('base64url')`) and logged once on create; existing admin left untouched on re-run. `Mealtime` has no unique key → guarded via `findFirst`. `db:seed:coolgardie` script added to `packages/server/package.json`.
 
 ### Phase 2: Menu data
 <!-- depends: Seed scaffold, branding, location | packages: server -->
 
-- [ ] **T2.1** Seed 9 categories with PDF sort order `[server]` `[~45 LOC]`
-- [ ] **T2.2** Seed menu items for Starters, Seafood, Burgers, and Mains (23 items; names, slugs, descriptions, prices per the table above; no images) `[server]` `[~150 LOC]` — depends: T2.1
-- [ ] **T2.3** Seed menu items for Pasta, Vegetarian, Sauces, Kids, and Dessert (18 items) `[server]` `[~110 LOC]` — depends: T2.1
-- [ ] **T2.4** Seed menu options (Sides on 5 mains, garlic prawns + sauce add-ons on steak, wings sauce, ice-cream topping) with count-guards `[server]` `[~80 LOC]` — depends: T2.2, T2.3
-- [ ] **T2.5** Seed allergens + unambiguous `MenuItemAllergen` rows and `MenuItemMealtime` rows (all items → Dinner) `[server]` `[~50 LOC]` — depends: T2.2, T2.3
+- [x] **T2.1** Seed 9 categories with PDF sort order `[server]` `[~45 LOC]`
+- [x] **T2.2** Seed menu items for Starters, Seafood, Burgers, and Mains (23 items; names, slugs, descriptions, prices per the table above; no images) `[server]` `[~150 LOC]` — depends: T2.1
+- [x] **T2.3** Seed menu items for Pasta, Vegetarian, Sauces, Kids, and Dessert (18 items) `[server]` `[~110 LOC]` — depends: T2.1
+- [x] **T2.4** Seed menu options (Sides on 5 mains, garlic prawns + sauce add-ons on steak, wings sauce, ice-cream topping) with count-guards `[server]` `[~80 LOC]` — depends: T2.2, T2.3
+- [x] **T2.5** Seed allergens + unambiguous `MenuItemAllergen` rows and `MenuItemMealtime` rows (all items → Dinner) `[server]` `[~50 LOC]` — depends: T2.2, T2.3
 
 (T2.2 and T2.3 are parallelisable after T2.1; T2.4 and T2.5 are parallelisable after both.)
+
+> **Session notes (2026-07-03)**: Menu is data-driven — a `menu: SeedCategory[]` constant (9 categories, 41 items, verbatim from the table above) walked by `seedMenu()`; options live in `optionsBySlug: Record<string, SeedOption[]>` with a shared `SIDES_OPTION` reused across the 5 choice-of-sides mains, guarded by per-item `menuOption.count()`. **Slug deviation**: the venue's Grilled Salmon uses `grilled-salmon-gold-rush` because the demo seed already owns the globally-unique `grilled-salmon` (the "all slugs disjoint" claim above missed this); every other slug is as planned. Allergen tagging follows the Allergens section; ambiguous cases (squid batter, chicken garlic balls, mushroom sauce cream, kiev butter) left untagged. Verified: 41 unique item slugs, 0 overlapping with `prisma/seed.ts`.
 
 ### Phase 3: Verification and docs
 <!-- depends: Menu data | packages: server, docs -->
 
-- [ ] **T3.1** Integration test `packages/server/src/__tests__/integration/seed-coolgardie.test.ts` (see Testing Strategy) `[server]` `[~60 LOC]` — depends: T2.4, T2.5
-- [ ] **T3.2** Document `db:seed:coolgardie` in `packages/docs/configuration/database.md`; add CHANGELOG entry `[docs]` `[~15 LOC]`
+- [x] **T3.1** Integration test `packages/server/src/__tests__/integration/seed-coolgardie.test.ts` (see Testing Strategy) `[server]` `[~60 LOC]` — depends: T2.4, T2.5
+- [x] **T3.2** Document `db:seed:coolgardie` in `packages/docs/configuration/database.md`; add CHANGELOG entry `[docs]` `[~15 LOC]`
+
+> **Session notes (2026-07-03)**: Test written TDD-first (failed on unresolved import before the seed existed), then extended per `test-auditor` findings: option-group content (steak/wings/ice-cream), Dinner mealtime links (41), tables (10/44 seats), allergen spot checks (Shellfish on prawn twisters, none on (GF) steak), admin user, per-category counts, `grilled-salmon-gold-rush` collision guard, and a location-scoped idempotency snapshot across 8 row kinds. **No live-DB run in this environment** (no Docker daemon access, no local PostgreSQL): the suite collects and skips (16 skipped) without `DATABASE_URL`; all 325 pre-existing server tests still pass; server `tsc --noEmit` and an ad-hoc strict typecheck of the seed are clean. A demo+venue coexistence test was not added — `prisma/seed.ts` runs `main()` as an un-awaitable import side effect and stays untouched per spec; coexistence is covered by the disjoint-slug check and the salmon slug assertion. `npm run lint` is broken repo-wide (no ESLint config exists — pre-existing); drafted `specs/draft/repair-eslint-config.md`. Docs: venue-seed section added to `packages/docs/configuration/database.md` (VitePress build green) and CHANGELOG `[Unreleased]` entry added per T3.2 (finalize should not duplicate it).
 
 ## Testing Strategy
 
@@ -259,5 +265,5 @@ Manual verification during `/wf:develop`: run `npm run db:seed:coolgardie -w pac
 
 ## Documentation Impact
 
-- [ ] `packages/docs/configuration/database.md` — add `db:seed:coolgardie` next to the existing seeding docs (fresh-DB usage note)
-- [ ] `CHANGELOG.md` — `### Added` entry under Unreleased
+- [x] `packages/docs/configuration/database.md` — add `db:seed:coolgardie` next to the existing seeding docs (fresh-DB usage note)
+- [x] `CHANGELOG.md` — `### Added` entry under Unreleased

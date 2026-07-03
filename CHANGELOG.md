@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+#### Coolgardie Gold Rush Motel venue seed
+- New standalone seed `prisma/seed-coolgardie.ts` (run via `npm run db:seed:coolgardie -w packages/server`) provisioning the real venue: branding/settings (rustic template, AUD, Australia/Perth), Coolgardie location with dinner hours and 10 tables, and the full 41-item June 2025 menu with options and allergen tags
+- The demo seed (`prisma/seed.ts`) is unchanged; the venue seed is additive and idempotent, intended for a fresh database
+- DB-gated integration test (`packages/server/src/__tests__/integration/seed-coolgardie.test.ts`) — runs when `DATABASE_URL` is set, skips otherwise
+
 ## [0.3.0] - 2026-05-14
 
 ### Added
