@@ -129,10 +129,12 @@ This directly fixes the "scan just goes to the menu with no feedback" confusion.
 
 > **Session notes**: `getTableQr` (read-only) returns `{ qrToken, url: tableQrUrl(qrToken) }`, 404 when the table has no token or doesn't exist; asserts `table.update` is never called. `GET .../qr` route registered before `POST .../qr` (method-distinct, no collision). TDD: 4 tests written first (Red), then impl. 27 table tests pass; server type-check clean.
 
-### Phase 2: Admin — view vs regenerate
+### Phase 2: Admin — view vs regenerate ✅
 <!-- depends: Server — read-only QR endpoint | packages: admin -->
 
-- [ ] **T2.1** `TableList.tsx`: `View QR` (GET) when `qrToken` present, `Generate QR` (POST) when absent, and a `Regenerate` button inside the modal (POST + confirm) `[admin]` `[~50 LOC]` — depends: T1.1
+- [x] **T2.1** `TableList.tsx`: `View QR` (GET) when `qrToken` present, `Generate QR` (POST) when absent, and a `Regenerate` button inside the modal (POST + confirm) `[admin]` `[~50 LOC]` — depends: T1.1
+
+> **Session notes**: Row action is now **View QR** (GET, no rotation) when the table has a token, else **Generate QR** (POST). `handleViewQr` GETs `{qrToken,url}` and renders the QR; the modal gained a **Regenerate** button that calls `handleGenerateQr` (keeps the "invalidates printed copies" confirm). `QrModalState` gained `table` so Regenerate has its target. Admin `tsc -b` clean. (No admin unit-test runner; covered by type-check + e2e/manual.)
 
 ### Phase 3: Storefront — visible & durable dine-in context
 <!-- packages: storefront -->
