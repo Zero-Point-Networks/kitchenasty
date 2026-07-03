@@ -13,6 +13,7 @@ interface Table {
 }
 
 interface QrModalState {
+  table: Table;
   tableName: string;
   url: string;
   dataUrl: string;
@@ -91,6 +92,20 @@ export default function TableList() {
     setSaving(false);
   };
 
+  // Read-only: show the table's existing QR without rotating the token.
+  const handleViewQr = async (table: Table) => {
+    try {
+      const res = await api.get<{ data: { qrToken: string; url: string } }>(
+        `/locations/${locationId}/tables/${table.id}/qr`,
+      );
+      const { url } = res.data;
+      const dataUrl = await QRCode.toDataURL(url, { width: 320, margin: 2 });
+      setQrModal({ table, tableName: table.name, url, dataUrl });
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to load QR code');
+    }
+  };
+
   const handleGenerateQr = async (table: Table) => {
     if (table.qrToken && !confirm(
       `Table "${table.name}" already has a QR code. Generating a new one invalidates any printed copies. Continue?`,
@@ -104,7 +119,7 @@ export default function TableList() {
       const { qrToken, url } = res.data;
       const dataUrl = await QRCode.toDataURL(url, { width: 320, margin: 2 });
       setTables((prev) => prev.map((t) => (t.id === table.id ? { ...t, qrToken } : t)));
-      setQrModal({ tableName: table.name, url, dataUrl });
+      setQrModal({ table: { ...table, qrToken }, tableName: table.name, url, dataUrl });
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to generate QR code');
     }
@@ -284,8 +299,8 @@ export default function TableList() {
                     {table._count.reservations}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
-                    <button onClick={() => handleGenerateQr(table)} className="text-primary-600 hover:text-primary-900 font-medium" aria-label={`${table.qrToken ? 'Regenerate' : 'Generate'} QR code for table ${table.name}`}>
-                      {table.qrToken ? 'Regenerate QR' : 'Generate QR'}
+                    <button onClick={() => (table.qrToken ? handleViewQr(table) : handleGenerateQr(table))} className="text-primary-600 hover:text-primary-900 font-medium" aria-label={`${table.qrToken ? 'View' : 'Generate'} QR code for table ${table.name}`}>
+                      {table.qrToken ? 'View QR' : 'Generate QR'}
                     </button>
                     <button onClick={() => openEditForm(table)} className="text-primary-600 hover:text-primary-900 font-medium" aria-label={`Edit table ${table.name}`}>
                       Edit
@@ -315,6 +330,12 @@ export default function TableList() {
                 className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
               >
                 Print
+              </button>
+              <button
+                onClick={() => handleGenerateQr(qrModal.table)}
+                className="px-4 py-2 border border-amber-300 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-50"
+              >
+                Regenerate
               </button>
               <button
                 onClick={() => setQrModal(null)}
