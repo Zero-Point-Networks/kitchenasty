@@ -75,6 +75,7 @@ export default defineConfig({
           items: [
             { text: 'Menu Management', link: '/features/menu-management' },
             { text: 'Ordering', link: '/features/ordering' },
+            { text: 'QR / Dine-in Ordering', link: '/features/qr-ordering' },
             { text: 'Reservations', link: '/features/reservations' },
             { text: 'Reviews', link: '/features/reviews' },
             { text: 'Kitchen Display', link: '/features/kitchen-display' },

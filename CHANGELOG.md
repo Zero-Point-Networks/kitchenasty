@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+#### Local Docker Setup
+- `docker compose up` now brings up a fully working stack out of the box — database migrations and demo data are applied **automatically**, so there's no manual setup step (the previous manual instructions no longer worked with the slimmed-down images)
+- Added a smoke-test script (`scripts/smoke.sh`) to verify a running stack
+- New `PUBLIC_URL` setting controls the storefront origin that dine-in QR codes point to
+
+### Added
+
+#### QR / Dine-in Ordering
+- Diners can scan a per-table QR code to open the menu already bound to their table and order without staff involvement, as a new **dine-in** order type
+- At checkout, dine-in orders can be paid online or **at the counter**, and can be placed anonymously (no account or contact details required)
+- Admins can generate and print a QR code for each table from **Locations → Tables** (regenerating a code warns that printed copies are invalidated)
+- Dine-in ordering is gated by a new **Dine-in** toggle in Order Settings
+- Staff can filter orders by dine-in and see a distinct dine-in badge in the order list and Kitchen Display
+- New documentation: "QR / Dine-in Ordering" feature and API reference pages
+
 ## [0.3.0] - 2026-05-14
 
 ### Added

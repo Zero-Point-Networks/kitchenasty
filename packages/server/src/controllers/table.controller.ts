@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/db.js';
+import { generateQrToken, tableQrUrl } from '../lib/qr.js';
 
 const createTableSchema = z.object({
   name: z.string().min(1),
@@ -111,6 +112,55 @@ export async function updateTable(req: Request<{ locationId: string; tableId: st
   });
 
   res.json({ success: true, data: updated });
+}
+
+// Public: resolve a dine-in QR token to its location + table identity.
+// Exposes only labels (no sensitive data) so the storefront can bootstrap
+// the dine-in context after a guest scans a code.
+export async function resolveTableByToken(req: Request<{ qrToken: string }>, res: Response): Promise<void> {
+  const { qrToken } = req.params;
+
+  const table = await prisma.table.findFirst({
+    where: { qrToken, isActive: true },
+    include: { location: { select: { id: true, name: true } } },
+  });
+
+  if (!table) {
+    res.status(404).json({ success: false, error: 'Table not found' });
+    return;
+  }
+
+  res.json({
+    success: true,
+    data: {
+      locationId: table.location.id,
+      locationName: table.location.name,
+      tableId: table.id,
+      tableName: table.name,
+    },
+  });
+}
+
+// Staff: set or rotate a table's QR token and return the scannable URL.
+// Rotating invalidates any previously printed code for this table.
+export async function generateTableQr(req: Request<{ locationId: string; tableId: string }>, res: Response): Promise<void> {
+  const { locationId, tableId } = req.params;
+
+  const table = await prisma.table.findFirst({
+    where: { id: tableId, locationId },
+  });
+  if (!table) {
+    res.status(404).json({ success: false, error: 'Table not found' });
+    return;
+  }
+
+  const qrToken = generateQrToken();
+  await prisma.table.update({
+    where: { id: tableId },
+    data: { qrToken },
+  });
+
+  res.json({ success: true, data: { qrToken, url: tableQrUrl(qrToken) } });
 }
 
 export async function deleteTable(req: Request<{ locationId: string; tableId: string }>, res: Response): Promise<void> {

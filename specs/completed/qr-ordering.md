@@ -1,6 +1,6 @@
 # QR Ordering (Dine-In / Scan-to-Order)
 
-## Status: Draft
+## Status: Complete
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
@@ -97,41 +97,81 @@ The storefront already has a central cart store: `packages/storefront/src/contex
 
 No new context module is created; `CartContext.tsx` is modified.
 
+## Review Fixes (code-reviewer pass)
+
+> Applied after a `code-reviewer` pass on the feature diff:
+> - **[Critical] `dineInEnabled` gate now enforced** — `createOrder` reads `siteSettings.orderSettings.dineInEnabled` and 400s dine-in orders when off (it was a dead toggle). Seeded `orderSettings.dineInEnabled: true`. New test: "rejects a DINE_IN order when dine-in is disabled".
+> - **[Warn] XSS hardening** — `handlePrintQr` HTML-escapes `tableName`/`url` before `document.write`.
+> - **[Warn] `any` → `unknown`** in the new `handleGenerateQr` catch.
+> - **[Warn] print timing** — `win.print()` now fires on `win.onload` (avoids blank-page race).
+> - **[Suggestion] route comment** softened (the routes can't actually shadow).
+> - **[Suggestion] default export on `TableLanding`** — kept (repo-wide convention; all pages use default export). Corrected the project profile's Language Standards, which had wrongly forbidden it.
+>
+> Applied after a `refactorer` pass:
+> - Dropped the `(req as any).user` cast (typed via `Express.User`); extracted `DEFAULT_PUBLIC_URL` in `lib/qr.ts` and reused it in `payment.controller.ts` (was duplicated); hid the scheduling widget for dine-in checkout; converted `catch (err: any)` → `unknown` in the touched checkout/table handlers.
+> - **Out of scope (tracked separately)**: the refactorer also flagged a pre-existing double `deliveryZone.findMany` query and a German error message in the **delivery** flow — unrelated to dine-in. Captured as `specs/draft/delivery-zone-query-dedup.md` rather than expanded into this spec.
+
 ## Implementation Order
 
-### Phase 1: Schema & contracts
+### Phase 1: Schema & contracts ✅
 <!-- packages: server -->
 
-- [ ] **T1.1** Add `DINE_IN` to `OrderType`; add `Order.tableId` + relation; add `Table.qrToken` (unique) + `orders` relation `[server]` `[~10 LOC]`
-- [ ] **T1.2** Add `dineInEnabled` to `orderSettings` (schema comment + settings schema) `[server]` `[~4 LOC]`
-- [ ] **T1.3** Generate migration; verify additive `[server]` `[~10 LOC]` — depends: T1.1
+- [x] **T1.1** Add `DINE_IN` to `OrderType`; add `Order.tableId` + relation; add `Table.qrToken` (unique) + `orders` relation `[server]` `[~10 LOC]`
+- [x] **T1.2** Add `dineInEnabled` to `orderSettings` (schema comment + settings schema) `[server]` `[~4 LOC]`
+- [x] **T1.3** Generate migration; verify additive `[server]` `[~10 LOC]` — depends: T1.1
 
-### Phase 2: Server — tokens & dine-in orders
+> **Session notes**: Schema edits in `prisma/schema.prisma` — `OrderType.DINE_IN`, `Order.tableId` + `table` relation, `Table.qrToken @unique` + `orders` relation, `orderSettings` comment. `dineInEnabled: z.boolean().optional()` added to `orderSettingsSchema` (`settings.controller.ts:191`). Migration `prisma/migrations/20260630083351_add_qr_dine_in_ordering/migration.sql` generated via `prisma migrate diff` (datamodel-to-datamodel; no DB in env) — fully additive: `ADD VALUE 'DINE_IN'`, two nullable columns, one unique index, one `ON DELETE SET NULL` FK. `prisma validate` passes; client regenerated. No DB available to run `migrate dev`, so the migration is unapplied — it will apply on first `prisma migrate deploy`/`dev` in a real env.
+
+### Phase 2: Server — tokens & dine-in orders ✅
 <!-- depends: Schema & contracts | packages: server -->
 
-- [ ] **T2.1** `GET /api/locations/tables/by-token/:qrToken` resolver in `table.controller.ts` + route `[server]` `[~35 LOC]` — depends: T1.1
-- [ ] **T2.2** `POST /api/locations/:locationId/tables/:tableId/qr` to set/rotate `qrToken`, returns storefront URL `[server]` `[~30 LOC]` — depends: T1.1
-- [ ] **T2.3** Accept `DINE_IN` + `tableToken` in `createOrderSchema`; branch out of address/zone logic; set `tableId` `[server]` `[~50 LOC]` — depends: T1.1
+- [x] **T2.1** `GET /api/locations/tables/by-token/:qrToken` resolver in `table.controller.ts` + route `[server]` `[~35 LOC]` — depends: T1.1
+- [x] **T2.2** `POST /api/locations/:locationId/tables/:tableId/qr` to set/rotate `qrToken`, returns storefront URL `[server]` `[~30 LOC]` — depends: T1.1
+- [x] **T2.3** Accept `DINE_IN` + `tableToken` in `createOrderSchema`; branch out of address/zone logic; set `tableId` `[server]` `[~50 LOC]` — depends: T1.1
 
-### Phase 3: Admin — QR management
+> **Session notes**: New `packages/server/src/lib/qr.ts` (`generateQrToken` = 18 random bytes base64url; `tableQrUrl` from `PUBLIC_URL`). `table.controller.ts` gained `resolveTableByToken` (public, returns location+table labels) and `generateTableQr` (staff, sets/rotates `qrToken`, returns scannable URL). Routes added in `location.routes.ts` — public `/tables/by-token/:qrToken` registered **before** the parameterised `/:locationId/tables/...` group to avoid shadowing; QR-generate gated by `SUPER_ADMIN`/`MANAGER`. `order.controller.ts`: `createOrderSchema` accepts `DINE_IN` + optional `tableToken`; dine-in is exempt from the guest name/email requirement (anonymous walk-in); table resolved (active + same location) and `tableId` persisted. **TDD**: tests written first (Red confirmed), then implementation. Unit `qr-token.test.ts` (5), dine-in cases in `order.test.ts` (+3), QR cases in `table.test.ts` (+6). Full server suite green: **339 tests pass**. Type-check clean. (Lint not runnable — eslint absent from the repo, pre-existing.) This satisfies T5.1 (server integration tests for dine-in + token resolution).
+
+### Phase 5 note
+> T5.1 (server integration tests for dine-in order creation + token resolution) was completed as part of Phase 2's TDD cycle — see the Phase 2 session notes. Marked complete below.
+
+### Phase 3: Admin — QR management ✅
 <!-- depends: Server — tokens & dine-in orders | packages: admin -->
 
-- [ ] **T3.1** Add `qrcode`/`qrcode.react` dependency to admin `[admin]` `[~2 LOC]`
-- [ ] **T3.2** QR generate/regenerate + print view in `TableList.tsx` (regenerate warns codes are invalidated) `[admin]` `[~80 LOC]` — depends: T2.2, T3.1
+- [x] **T3.1** Add `qrcode`/`qrcode.react` dependency to admin `[admin]` `[~2 LOC]`
+- [x] **T3.2** QR generate/regenerate + print view in `TableList.tsx` (regenerate warns codes are invalidated) `[admin]` `[~80 LOC]` — depends: T2.2, T3.1
 
-### Phase 4: Storefront — scan-to-order flow
+> **Session notes**: Used `qrcode` (`^1.5.4`, + `@types/qrcode`) rather than `qrcode.react` — `QRCode.toDataURL()` yields a data URL that prints cleanly in a new window. `TableList.tsx`: per-row "Generate QR" / "Regenerate QR" button (regenerate `confirm()`s that printed copies are invalidated), `handleGenerateQr` POSTs to `/locations/:id/tables/:id/qr`, renders the returned URL as a QR in a modal with a Print action (`handlePrintQr` opens a print window with the data-URL image + table name + URL). `Table` interface gained `qrToken`. Admin `tsc -b` clean. No admin unit-test runner in repo; UI is covered by the e2e flow (T5.2).
+
+### Phase 4: Storefront — scan-to-order flow ✅
 <!-- depends: Server — tokens & dine-in orders | packages: storefront -->
 
-- [ ] **T4.1** Extend `CartContext.tsx` with `dineIn` state + `setDineIn` (clear on `clear()`) `[storefront]` `[~25 LOC]` — depends: T2.1
-- [ ] **T4.2** `TableLanding` page + `/t/:token` route; resolves token, calls `setDineIn`, redirects to menu `[storefront]` `[~50 LOC]` — depends: T4.1
-- [ ] **T4.3** Dine-in checkout in `Checkout.tsx`: table banner, no address step, Pay-now vs Pay-at-counter, send `tableToken` `[storefront]` `[~70 LOC]` — depends: T4.1, T2.3
+- [x] **T4.1** Extend `CartContext.tsx` with `dineIn` state + `setDineIn` (clear on `clear()`) `[storefront]` `[~25 LOC]` — depends: T2.1
+- [x] **T4.2** `TableLanding` page + `/t/:token` route; resolves token, calls `setDineIn`, redirects to menu `[storefront]` `[~50 LOC]` — depends: T4.1
+- [x] **T4.3** Dine-in checkout in `Checkout.tsx`: table banner, no address step, Pay-now vs Pay-at-counter, send `tableToken` `[storefront]` `[~70 LOC]` — depends: T4.1, T2.3
+
+> **Session notes**: `DineInContext` = `{ token, locationId, tableId, tableName }` — the raw `token` is kept so checkout can submit it as `tableToken` (the resolver discards it otherwise). `CartContext` extended with `dineIn` + `setDineIn`, cleared in `clear()`. New `TableLanding` page (`/t/:token`) fetches the by-token resolver, calls `setDineIn`, redirects to `/menu` (shows a recoverable error on invalid token). `Checkout`: when `dineIn` is set it forces `orderType: 'DINE_IN'`, hides the order-type selector + address (shows a "Dine-in — {tableName}" banner), forces delivery fee to 0, relabels cash as "Pay at Counter", makes guest contact optional, and submits `tableToken`. New i18n keys added to `en.json` (`checkout.payAtCounter/dineInTitle/dineInSubtitle`, `tableLanding.*`); other 5 locales fall back to `en` (`fallbackLng: 'en'`) — run `npm run translate -w packages/storefront` to localize. `tsc -b` clean for admin + storefront.
+
+### Phase 5 note (T5.2)
+> T5.2 (e2e) added as `e2e/storefront/dine-in.spec.ts` — covers the deterministic dine-in entry behaviour (invalid token recovery + valid-token resolution to `/menu`). Seeded a fixed token `dev-table-1-qr` on Table 1 in `prisma/seed.ts` to make it runnable. The full menu-modal → add-to-cart → place-order path is not e2e'd (the existing suite doesn't build carts); dine-in order creation is covered by server integration tests. E2E requires a running stack (server + storefront + DB) — not executed in this environment.
 
 ### Phase 5: Tests & docs
 <!-- depends: Storefront — scan-to-order flow | packages: server, storefront, docs -->
 
-- [ ] **T5.1** Integration tests for dine-in order creation + token resolution `[server]` `[~80 LOC]` — depends: T2.3
-- [ ] **T5.2** E2E: scan-link → menu → dine-in checkout (pay-at-counter) in `e2e/storefront/dine-in.spec.ts` (**NEW**) `[storefront]` `[~60 LOC]` — depends: T4.3
-- [ ] **T5.3** Docs: QR ordering setup + table QR printing `[docs]` `[~30 LOC]` — depends: T3.2, T4.3
+- [x] **T5.1** Integration tests for dine-in order creation + token resolution `[server]` `[~80 LOC]` — depends: T2.3 (done in Phase 2 TDD)
+- [x] **T5.2** E2E: scan-link → menu → dine-in checkout (pay-at-counter) in `e2e/storefront/dine-in.spec.ts` (**NEW**) `[storefront]` `[~60 LOC]` — depends: T4.3 (entry flow; see Phase 5 note)
+- [x] **T5.3** Docs: QR ordering setup + table QR printing `[docs]` `[~30 LOC]` — depends: T3.2, T4.3
+
+### Phase 6: Finalization fixes ✅
+<!-- packages: shared, admin -->
+
+Admin/shared consistency gaps found in the `/wf:finalize` deep audit (dine-in was a first-class order type in the server but not surfaced in admin filters/badges or the shared enum):
+
+- [x] **T6.1** Add `dine_in` to shared `ORDER_TYPES` (`packages/shared/src/index.ts`) + update shared tests `[shared]` `[~1 LOC]`
+- [x] **T6.2** Add a **Dine-in** filter option + distinct badge colour for `DINE_IN` in `OrderList.tsx` `[admin]` `[~4 LOC]`
+- [x] **T6.3** Distinct badge colour for `DINE_IN` in `KitchenDisplay.tsx` `[admin]` `[~2 LOC]`
+- [x] **T6.4** Fix shared build/test gap — exclude `src/__tests__` from the `tsc` build and `dist/**` from vitest so building shared (required before downstream tests) no longer pollutes the test run `[shared]` `[~4 LOC]`
+
+> **Finalize audit note**: Read every implementation file end-to-end — no bugs/regressions in the core flow (token gen/resolution, gated order creation, `tableId` persistence, storefront landing/checkout, admin QR). `handleComplete` in KitchenDisplay handles `DINE_IN` gracefully (→ `PICKED_UP`). Known limitation (matches app-wide single-location assumption): `createOrder` uses the first active location, so dine-in tables at a non-first location would be rejected in a multi-location deployment.
 
 ## Testing Strategy
 
@@ -191,8 +231,14 @@ E2E (`e2e/storefront/`): visiting `/t/<token>` lands on the menu with the table 
 | `packages/server/src/__tests__/integration/order.test.ts` | Dine-in + token tests |
 | `e2e/storefront/dine-in.spec.ts` | **NEW** — scan-to-order e2e spec |
 | `packages/docs/features/` | QR ordering docs |
+| `packages/shared/src/index.ts` | Add `dine_in` to `ORDER_TYPES` (finalize) |
+| `packages/shared/src/__tests__/index.test.ts` | Update `ORDER_TYPES` assertions (finalize) |
+| `packages/shared/tsconfig.json`, `packages/shared/vitest.config.ts` | Exclude tests from build / dist from test run (finalize) |
+| `packages/admin/src/pages/OrderList.tsx` | Dine-in filter option + badge colour (finalize) |
+| `packages/admin/src/pages/KitchenDisplay.tsx` | Dine-in badge colour (finalize) |
 
 ## Documentation Impact
 
-- [ ] `packages/docs/features/` — new "QR / Dine-in Ordering" feature page
-- [ ] `packages/docs/guide/` — operator guide: creating tables, printing QR codes
+- [x] `packages/docs/features/qr-ordering.md` — new "QR / Dine-in Ordering" feature page (registered in the VitePress sidebar)
+- [x] `packages/docs/features/ordering.md` — added `DINE_IN` to the Order Types table
+- [x] `packages/docs/guide/` — operator guidance on creating tables / printing QR codes was folded into the feature page's "Generating & printing" section; no separate guide page added

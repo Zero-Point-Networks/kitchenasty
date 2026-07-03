@@ -18,6 +18,13 @@ export interface CartItem {
   comment?: string;
 }
 
+export interface DineInContext {
+  token: string; // raw qrToken from the scanned URL; submitted to the order API as tableToken
+  locationId: string;
+  tableId: string;
+  tableName: string;
+}
+
 interface CartContextType {
   items: CartItem[];
   isOpen: boolean;
@@ -28,6 +35,8 @@ interface CartContextType {
   clear: () => void;
   itemCount: number;
   subtotal: number;
+  dineIn: DineInContext | null;
+  setDineIn: (ctx: DineInContext | null) => void;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -37,6 +46,7 @@ let nextId = 1;
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [dineIn, setDineIn] = useState<DineInContext | null>(null);
 
   const addItem = useCallback((item: Omit<CartItem, 'id'>) => {
     setItems((prev) => [...prev, { ...item, id: String(nextId++) }]);
@@ -57,6 +67,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const clear = useCallback(() => {
     setItems([]);
+    setDineIn(null);
   }, []);
 
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -67,7 +78,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, 0);
 
   return (
-    <CartContext.Provider value={{ items, isOpen, setIsOpen, addItem, updateQuantity, removeItem, clear, itemCount, subtotal }}>
+    <CartContext.Provider value={{ items, isOpen, setIsOpen, addItem, updateQuantity, removeItem, clear, itemCount, subtotal, dineIn, setDineIn }}>
       {children}
     </CartContext.Provider>
   );

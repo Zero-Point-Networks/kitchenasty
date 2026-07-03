@@ -56,12 +56,12 @@ describe('Shared Constants', () => {
   });
 
   describe('ORDER_TYPES', () => {
-    it('contains delivery and pickup', () => {
-      expect(ORDER_TYPES).toEqual(['delivery', 'pickup']);
+    it('contains delivery, pickup and dine_in', () => {
+      expect(ORDER_TYPES).toEqual(['delivery', 'pickup', 'dine_in']);
     });
 
-    it('has exactly 2 types', () => {
-      expect(ORDER_TYPES).toHaveLength(2);
+    it('has exactly 3 types', () => {
+      expect(ORDER_TYPES).toHaveLength(3);
     });
   });
 

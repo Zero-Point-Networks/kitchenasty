@@ -11,6 +11,7 @@ import Login from './pages/Login.js';
 import Register from './pages/Register.js';
 import Account from './pages/Account.js';
 import Menu from './pages/Menu.js';
+import TableLanding from './pages/TableLanding.js';
 import Checkout from './pages/Checkout.js';
 import OrderConfirmation from './pages/OrderConfirmation.js';
 import Reservations from './pages/Reservations.js';
@@ -35,6 +36,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Route path="/" element={<Home />} />
             <Route path="/locations" element={<Locations />} />
             <Route path="/menu" element={<Menu />} />
+            <Route path="/t/:token" element={<TableLanding />} />
             <Route path="/reservations" element={<Reservations />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/checkout" element={<Checkout />} />

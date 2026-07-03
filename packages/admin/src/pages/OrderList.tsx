@@ -98,6 +98,7 @@ export default function OrderList() {
           <option value="">All Types</option>
           <option value="DELIVERY">Delivery</option>
           <option value="PICKUP">Pickup</option>
+          <option value="DINE_IN">Dine-in</option>
         </select>
       </div>
 
@@ -146,7 +147,7 @@ export default function OrderList() {
                       {order.customer ? order.customer.name : <span className="text-gray-400">Guest</span>}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${order.orderType === 'DELIVERY' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${order.orderType === 'DELIVERY' ? 'bg-blue-100 text-blue-700' : order.orderType === 'DINE_IN' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
                         }`}>
                         {order.orderType}
                       </span>

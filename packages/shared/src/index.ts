@@ -23,7 +23,7 @@ export const RESERVATION_STATUSES = [
 
 export type ReservationStatus = (typeof RESERVATION_STATUSES)[number];
 
-export const ORDER_TYPES = ['delivery', 'pickup'] as const;
+export const ORDER_TYPES = ['delivery', 'pickup', 'dine_in'] as const;
 export type OrderType = (typeof ORDER_TYPES)[number];
 
 export const STAFF_ROLES = ['super_admin', 'manager', 'staff'] as const;
