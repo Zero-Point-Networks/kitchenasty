@@ -184,7 +184,7 @@ export default function KitchenDisplay() {
                 {scheduledOrders.map((order) => (
                   <div key={order.id} className="bg-white rounded-lg border border-indigo-200 px-3 py-2 text-xs">
                     <span className="font-mono font-bold text-gray-900">#{order.orderNumber}</span>
-                    <span className={`ml-2 px-1.5 py-0.5 rounded font-medium ${order.orderType === 'DELIVERY' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                    <span className={`ml-2 px-1.5 py-0.5 rounded font-medium ${order.orderType === 'DELIVERY' ? 'bg-blue-100 text-blue-700' : order.orderType === 'DINE_IN' ? 'bg-purple-100 text-purple-700' : 'bg-green-100 text-green-700'
                       }`}>
                       {order.orderType}
                     </span>

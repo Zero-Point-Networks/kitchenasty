@@ -1,6 +1,6 @@
 # QR Ordering (Dine-In / Scan-to-Order)
 
-## Status: In Progress
+## Status: Complete
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
@@ -161,6 +161,18 @@ No new context module is created; `CartContext.tsx` is modified.
 - [x] **T5.2** E2E: scan-link → menu → dine-in checkout (pay-at-counter) in `e2e/storefront/dine-in.spec.ts` (**NEW**) `[storefront]` `[~60 LOC]` — depends: T4.3 (entry flow; see Phase 5 note)
 - [x] **T5.3** Docs: QR ordering setup + table QR printing `[docs]` `[~30 LOC]` — depends: T3.2, T4.3
 
+### Phase 6: Finalization fixes ✅
+<!-- packages: shared, admin -->
+
+Admin/shared consistency gaps found in the `/wf:finalize` deep audit (dine-in was a first-class order type in the server but not surfaced in admin filters/badges or the shared enum):
+
+- [x] **T6.1** Add `dine_in` to shared `ORDER_TYPES` (`packages/shared/src/index.ts`) + update shared tests `[shared]` `[~1 LOC]`
+- [x] **T6.2** Add a **Dine-in** filter option + distinct badge colour for `DINE_IN` in `OrderList.tsx` `[admin]` `[~4 LOC]`
+- [x] **T6.3** Distinct badge colour for `DINE_IN` in `KitchenDisplay.tsx` `[admin]` `[~2 LOC]`
+- [x] **T6.4** Fix shared build/test gap — exclude `src/__tests__` from the `tsc` build and `dist/**` from vitest so building shared (required before downstream tests) no longer pollutes the test run `[shared]` `[~4 LOC]`
+
+> **Finalize audit note**: Read every implementation file end-to-end — no bugs/regressions in the core flow (token gen/resolution, gated order creation, `tableId` persistence, storefront landing/checkout, admin QR). `handleComplete` in KitchenDisplay handles `DINE_IN` gracefully (→ `PICKED_UP`). Known limitation (matches app-wide single-location assumption): `createOrder` uses the first active location, so dine-in tables at a non-first location would be rejected in a multi-location deployment.
+
 ## Testing Strategy
 
 ### Unit Tests
@@ -219,6 +231,11 @@ E2E (`e2e/storefront/`): visiting `/t/<token>` lands on the menu with the table 
 | `packages/server/src/__tests__/integration/order.test.ts` | Dine-in + token tests |
 | `e2e/storefront/dine-in.spec.ts` | **NEW** — scan-to-order e2e spec |
 | `packages/docs/features/` | QR ordering docs |
+| `packages/shared/src/index.ts` | Add `dine_in` to `ORDER_TYPES` (finalize) |
+| `packages/shared/src/__tests__/index.test.ts` | Update `ORDER_TYPES` assertions (finalize) |
+| `packages/shared/tsconfig.json`, `packages/shared/vitest.config.ts` | Exclude tests from build / dist from test run (finalize) |
+| `packages/admin/src/pages/OrderList.tsx` | Dine-in filter option + badge colour (finalize) |
+| `packages/admin/src/pages/KitchenDisplay.tsx` | Dine-in badge colour (finalize) |
 
 ## Documentation Impact
 
