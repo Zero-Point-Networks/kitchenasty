@@ -28,7 +28,7 @@ curl -fsS "$ADMIN/" >/dev/null && pass "admin reachable ($ADMIN)" \
   || fail "admin reachable"
 
 # 4. Seed applied — menu has items
-curl -fsS "$API/api/menu" | grep -q '"id"' && pass "seeded menu returned items" \
+curl -fsS "$API/api/menu/items" | grep -q '"id"' && pass "seeded menu returned items" \
   || fail "seeded menu empty (is the migrate/seed step done?)"
 
 # 5. Dine-in QR token resolves (seeded dev-table-1-qr)
