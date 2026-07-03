@@ -158,7 +158,7 @@ Nine categories (sortOrder in PDF order): Starters, Seafood, Burgers, Mains, Pas
 | Dessert | Ice Cream Sundae | 12 | |
 | Dessert | Ice Cream | 8 | Choice of chocolate, strawberry or caramel topping |
 
-41 items. The PDF cross-lists Pasta Carbonara and Soup of the Day under Vegetarian; `MenuItem.slug` is unique so each item is seeded once, in its primary category. No item images are seeded (`image` left null; admin uploads real photos later — the demo's Unsplash placeholders would misrepresent the venue's food).
+41 items. The PDF cross-lists Pasta Carbonara and Soup of the Day under Vegetarian; `MenuItem.slug` is unique so each item is seeded once, in its primary category.
 
 ### Menu options
 
@@ -176,10 +176,17 @@ Options are guarded with a per-item `menuOption.count()` check so re-seeding doe
 
 The 8 standard allergens are upserted (same list as the demo seed). Only unambiguous associations are tagged — e.g. Gluten on breads/battered/crumbed/pasta/burgers/desserts with pastry, Shellfish on prawn/squid/seafood-basket items, Fish on flathead/salmon/fish 'n' chips, Dairy on cheese/cream dishes and desserts, Eggs on carbonara and egg-topped burgers. Items marked (GF) on the menu get no Gluten tag. The exact mapping is finalized in implementation; nothing speculative is tagged.
 
+### Generated placeholder menu imagery
+
+The venue will replace these with real food photos before go-live, but the seeded storefront should not show empty image placeholders during review and staging. Generated placeholder assets are committed under `prisma/seed-assets/coolgardie-menu/` and copied by `seedCoolgardie()` into `uploads/coolgardie-menu/` when the seed runs. Menu items store `/uploads/coolgardie-menu/{slug}.webp`, matching the existing upload-serving contract while keeping source assets in a tracked, seed-owned directory instead of the gitignored runtime upload volume.
+
+The generated images are intentionally generic, clean food photography placeholders: no venue branding, no text, no watermarks, no claim that they are actual Coolgardie dishes. The admin can replace each item through the existing menu image upload flow.
+
 ### Alternatives Considered
 
 - **Replacing `prisma/seed.ts`** — rejected: the fork contributes back upstream, and the demo seed doubles as e2e/dev fixture data.
 - **Committing the logo into the repo / media library** — deferred (Out of Scope): hotlinking the venue CDN works today and avoids checking a ~1.1 MB binary into the shared fork; revisit when real food photography is added.
+- **Writing generated files straight into `uploads/`** — rejected: `uploads/` is gitignored and commonly mounted as a Docker volume, so committed seed assets would be unreliable. The seed copies tracked source assets into the runtime upload path instead.
 
 ## Implementation Order
 
@@ -216,6 +223,14 @@ The 8 standard allergens are upserted (same list as the demo seed). Only unambig
 
 > **Session notes (2026-07-03)**: Test written TDD-first (failed on unresolved import before the seed existed), then extended per `test-auditor` findings: option-group content (steak/wings/ice-cream), Dinner mealtime links (41), tables (10/44 seats), allergen spot checks (Shellfish on prawn twisters, none on (GF) steak), admin user, per-category counts, `grilled-salmon-gold-rush` collision guard, and a location-scoped idempotency snapshot across 8 row kinds. **No live-DB run in this environment** (no Docker daemon access, no local PostgreSQL): the suite collects and skips (16 skipped) without `DATABASE_URL`; all 325 pre-existing server tests still pass; server `tsc --noEmit` and an ad-hoc strict typecheck of the seed are clean. A demo+venue coexistence test was not added — `prisma/seed.ts` runs `main()` as an un-awaitable import side effect and stays untouched per spec; coexistence is covered by the disjoint-slug check and the salmon slug assertion. `npm run lint` is broken repo-wide (no ESLint config exists — pre-existing); drafted `specs/draft/repair-eslint-config.md`. Docs: venue-seed section added to `packages/docs/configuration/database.md` (VitePress build green) and CHANGELOG `[Unreleased]` entry added per T3.2 (finalize should not duplicate it).
 
+### Phase 4: Generated placeholder menu imagery
+<!-- depends: Verification and docs | packages: server, docs -->
+
+- [ ] **T4.1** Generate one placeholder food image for each of the 41 Coolgardie menu item slugs and commit the source assets under `prisma/seed-assets/coolgardie-menu/` `[server]` `[41 files]`
+- [ ] **T4.2** Update `prisma/seed-coolgardie.ts` so `seedCoolgardie()` copies tracked source assets into `uploads/coolgardie-menu/` and seeds each `MenuItem.image` to `/uploads/coolgardie-menu/{slug}.webp` `[server]` `[~45 LOC]` — depends: T4.1
+- [ ] **T4.3** Extend `packages/server/src/__tests__/integration/seed-coolgardie.test.ts` to assert every seeded Coolgardie item has a generated image path and the seed remains idempotent with images populated `[server]` `[~20 LOC]` — depends: T4.2
+- [ ] **T4.4** Update docs/CHANGELOG to note that the Coolgardie seed includes generated placeholder menu imagery copied into runtime uploads `[docs]` `[~10 LOC]` — depends: T4.2
+
 ## Testing Strategy
 
 ### Unit Tests
@@ -226,7 +241,7 @@ None — the seed is pure data provisioning; there is no logic to unit-test in i
 
 | Test File | What It Tests |
 |-----------|--------------|
-| `packages/server/src/__tests__/integration/seed-coolgardie.test.ts` | Imports `seedCoolgardie` and runs it against a real PostgreSQL DB. Unlike the existing integration tests (which mock `lib/db.js` via `vi.mock` and never touch PostgreSQL), this one needs the real data layer, so it is gated with `describe.skipIf(!process.env.DATABASE_URL)` — it skips cleanly where no DB is configured and runs when `DATABASE_URL` points at a migrated database. Asserts: `SiteSettings.siteName === 'Coolgardie Gold Rush Motel'`, `storefrontTemplate === 'rustic'`, `generalSettings.defaultCurrency === 'AUD'`; location slug `coolgardie` exists with 7 operating hours and `deliveryEnabled === false`; 9 categories and 41 menu items for that location; Grilled Sirloin Steak has 3 options; **idempotency** — running `seedCoolgardie` a second time leaves category/item/option counts unchanged. |
+| `packages/server/src/__tests__/integration/seed-coolgardie.test.ts` | Imports `seedCoolgardie` and runs it against a real PostgreSQL DB. Unlike the existing integration tests (which mock `lib/db.js` via `vi.mock` and never touch PostgreSQL), this one needs the real data layer, so it is gated with `describe.skipIf(!process.env.DATABASE_URL)` — it skips cleanly where no DB is configured and runs when `DATABASE_URL` points at a migrated database. Asserts: `SiteSettings.siteName === 'Coolgardie Gold Rush Motel'`, `storefrontTemplate === 'rustic'`, `generalSettings.defaultCurrency === 'AUD'`; location slug `coolgardie` exists with 7 operating hours and `deliveryEnabled === false`; 9 categories and 41 menu items for that location; every menu item has a generated `/uploads/coolgardie-menu/*.webp` image path; Grilled Sirloin Steak has 3 options; **idempotency** — running `seedCoolgardie` a second time leaves category/item/option counts unchanged. |
 
 Manual verification during `/wf:develop`: run `npm run db:seed:coolgardie -w packages/server` against the local Docker dev DB and load the storefront to confirm the rustic template renders with venue branding and the full menu.
 
@@ -244,7 +259,7 @@ Manual verification during `/wf:develop`: run `npm run db:seed:coolgardie -w pac
 ## Out of Scope
 
 - Downloading/committing the logo or any food photography into the repo or media library (admin uploads post-deploy; revisit as its own task when the venue supplies photos).
-- Menu item images — seeded null, populated later via admin.
+- Venue-owned menu item photography — generated placeholders are seeded only until the venue uploads real photos through admin.
 - Any storefront template/code changes — branding is achieved purely with existing `SiteSettings` fields and the existing `rustic` template.
 - Accommodation/rooms content from the motel website — this platform covers the restaurant only.
 - QR table tokens and `orderSettings.dineInEnabled` — the schema/settings fields don't exist yet; `specs/draft/qr-ordering.md` owns them and must extend this seed (Table 1 token, dine-in flag) when it lands.
@@ -258,6 +273,7 @@ Manual verification during `/wf:develop`: run `npm run db:seed:coolgardie -w pac
 | File | Change |
 |------|--------|
 | `prisma/seed-coolgardie.ts` | **NEW** — venue seed: `seedCoolgardie()` export + CLI entry |
+| `prisma/seed-assets/coolgardie-menu/*.webp` | **NEW** — generated placeholder source assets copied into runtime uploads by the seed |
 | `packages/server/package.json` | Add `db:seed:coolgardie` script |
 | `packages/server/src/__tests__/integration/seed-coolgardie.test.ts` | **NEW** — integration test per Testing Strategy |
 | `packages/docs/configuration/database.md` | Document the venue seed command alongside `db:seed` |
@@ -267,3 +283,5 @@ Manual verification during `/wf:develop`: run `npm run db:seed:coolgardie -w pac
 
 - [x] `packages/docs/configuration/database.md` — add `db:seed:coolgardie` next to the existing seeding docs (fresh-DB usage note)
 - [x] `CHANGELOG.md` — `### Added` entry under Unreleased
+- [ ] `packages/docs/configuration/database.md` — mention generated placeholder menu imagery and runtime upload copy behavior
+- [ ] `CHANGELOG.md` — `### Changed`/`### Added` note for generated Coolgardie placeholder images
