@@ -1,6 +1,6 @@
 # QR Ordering UX Polish
 
-## Status: Draft
+## Status: In Progress
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
@@ -121,11 +121,13 @@ This directly fixes the "scan just goes to the menu with no feedback" confusion.
 
 > `[infra]` is not used here. Tags are workspace packages from the profile.
 
-### Phase 1: Server — read-only QR endpoint
+### Phase 1: Server — read-only QR endpoint ✅
 <!-- packages: server -->
 
-- [ ] **T1.1** Add `getTableQr` to `table.controller.ts` + `GET /:locationId/tables/:tableId/qr` route in `location.routes.ts` `[server]` `[~25 LOC]`
-- [ ] **T1.2** Integration tests in `table.test.ts`: GET returns `{qrToken,url}` for a table with a token; 404 for a table without one / unknown table; staff-auth required `[server]` `[~30 LOC]` — depends: T1.1
+- [x] **T1.1** Add `getTableQr` to `table.controller.ts` + `GET /:locationId/tables/:tableId/qr` route in `location.routes.ts` `[server]` `[~25 LOC]`
+- [x] **T1.2** Integration tests in `table.test.ts`: GET returns `{qrToken,url}` for a table with a token; 404 for a table without one / unknown table; staff-auth required `[server]` `[~30 LOC]` — depends: T1.1
+
+> **Session notes**: `getTableQr` (read-only) returns `{ qrToken, url: tableQrUrl(qrToken) }`, 404 when the table has no token or doesn't exist; asserts `table.update` is never called. `GET .../qr` route registered before `POST .../qr` (method-distinct, no collision). TDD: 4 tests written first (Red), then impl. 27 table tests pass; server type-check clean.
 
 ### Phase 2: Admin — view vs regenerate
 <!-- depends: Server — read-only QR endpoint | packages: admin -->

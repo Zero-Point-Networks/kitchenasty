@@ -141,6 +141,20 @@ export async function resolveTableByToken(req: Request<{ qrToken: string }>, res
   });
 }
 
+// Staff: read a table's current QR token + scannable URL without rotating it,
+// so staff can re-view/print an existing code. 404 if no code exists yet.
+export async function getTableQr(req: Request<{ locationId: string; tableId: string }>, res: Response): Promise<void> {
+  const { locationId, tableId } = req.params;
+
+  const table = await prisma.table.findFirst({ where: { id: tableId, locationId } });
+  if (!table || !table.qrToken) {
+    res.status(404).json({ success: false, error: 'No QR code for this table' });
+    return;
+  }
+
+  res.json({ success: true, data: { qrToken: table.qrToken, url: tableQrUrl(table.qrToken) } });
+}
+
 // Staff: set or rotate a table's QR token and return the scannable URL.
 // Rotating invalidates any previously printed code for this table.
 export async function generateTableQr(req: Request<{ locationId: string; tableId: string }>, res: Response): Promise<void> {
