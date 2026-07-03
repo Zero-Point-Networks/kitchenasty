@@ -373,7 +373,7 @@ async function seedMenu(prisma: PrismaClient, locationId: string, dinnerId: stri
   const allergens = await Promise.all(
     ALLERGEN_NAMES.map((name) => prisma.allergen.upsert({ where: { name }, update: {}, create: { name } }))
   );
-  const allergenIdByName = Object.fromEntries(allergens.map((a) => [a.name, a.id]));
+  const allergenIdByName = new Map(allergens.map((a) => [a.name, a.id]));
 
   const allergenRows: Array<{ menuItemId: string; allergenId: string }> = [];
   const mealtimeRows: Array<{ menuItemId: string; mealtimeId: string }> = [];
@@ -415,7 +415,11 @@ async function seedMenu(prisma: PrismaClient, locationId: string, dinnerId: stri
       }
 
       for (const allergenName of itemData.allergens ?? []) {
-        allergenRows.push({ menuItemId: item.id, allergenId: allergenIdByName[allergenName] });
+        const allergenId = allergenIdByName.get(allergenName);
+        if (!allergenId) {
+          throw new Error(`Unknown allergen "${allergenName}" on menu item "${itemData.slug}"`);
+        }
+        allergenRows.push({ menuItemId: item.id, allergenId });
       }
       mealtimeRows.push({ menuItemId: item.id, mealtimeId: dinnerId });
     }
