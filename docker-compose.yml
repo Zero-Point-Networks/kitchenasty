@@ -4,7 +4,7 @@ services:
     container_name: kitchenasty-db
     environment:
       POSTGRES_USER: kitchenasty
-      POSTGRES_PASSWORD: kitchenasty
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kitchenasty}
       POSTGRES_DB: kitchenasty
     ports:
       - "5432:5432"
@@ -16,6 +16,23 @@ services:
       timeout: 5s
       retries: 5
 
+  # One-shot init: apply migrations + seed, then exit. Built from the server
+  # Dockerfile's builder stage, which has the Prisma CLI, tsx, the migrations,
+  # and prisma/seed.ts (the lean runtime image is --omit=dev and can't do this).
+  migrate:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+      target: builder
+    container_name: kitchenasty-migrate
+    command: sh -c "npm run db:deploy -w packages/server && npm run db:seed -w packages/server"
+    environment:
+      DATABASE_URL: postgresql://kitchenasty:${POSTGRES_PASSWORD:-kitchenasty}@postgres:5432/kitchenasty
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
   server:
     build:
       context: .
@@ -26,13 +43,22 @@ services:
     environment:
       PORT: 3000
       NODE_ENV: development
-      DATABASE_URL: postgresql://kitchenasty:kitchenasty@postgres:5432/kitchenasty
+      DATABASE_URL: postgresql://kitchenasty:${POSTGRES_PASSWORD:-kitchenasty}@postgres:5432/kitchenasty
       CORS_ORIGINS: http://localhost:5173,http://localhost:5174
-      JWT_SECRET: change-this-to-a-random-secret
+      JWT_SECRET: ${JWT_SECRET:-change-this-to-a-random-secret}
       JWT_EXPIRES_IN: 7d
+      # Origin the storefront is reached at — dine-in QR codes point here.
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:5174}
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   admin:
     build:
@@ -42,7 +68,8 @@ services:
     ports:
       - "5173:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
   storefront:
     build:
@@ -52,7 +79,8 @@ services:
     ports:
       - "5174:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
   docs:
     build:

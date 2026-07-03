@@ -1,6 +1,6 @@
 # Local Docker Dev Environment
 
-## Status: Draft
+## Status: In Progress
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
@@ -136,27 +136,33 @@ Add a root `docker:dev` script for discoverability:
 
 > **Package tags**: `[infra]` denotes root-level infrastructure files (`docker-compose.yml`, `.env.example`, `scripts/`, root `package.json`) that have no owning workspace package — it is not one of the profile's six workspace packages. Tooling that validates tags against the package list should treat `[infra]` as root-scoped.
 
-### Phase 1: Database lifecycle in Docker
+### Phase 1: Database lifecycle in Docker ✅
 <!-- packages: server, infra -->
 
-- [ ] **T1.1** Add `db:deploy` (`prisma migrate deploy`) to `packages/server/package.json` `[server]` `[~1 LOC]`
-- [ ] **T1.2** Make `prisma/seed.ts` re-run-safe — orders via `createMany({ skipDuplicates: true })` (or count-guard), guard delivery-zone/mealtime/reservation creates `[server]` `[~30 LOC]`
-- [ ] **T1.3** Add the one-shot `migrate` service (builder target, runs deploy + seed) to `docker-compose.yml` `[infra]` `[~12 LOC]` — depends: T1.1, T1.2
-- [ ] **T1.4** Gate `server` on `migrate` completion; add `PUBLIC_URL` + server healthcheck; make `admin`/`storefront` wait for `server: service_healthy` `[infra]` `[~15 LOC]` — depends: T1.3
+- [x] **T1.1** Add `db:deploy` (`prisma migrate deploy`) to `packages/server/package.json` `[server]` `[~1 LOC]`
+- [x] **T1.2** Make `prisma/seed.ts` re-run-safe — orders via `createMany({ skipDuplicates: true })` (or count-guard), guard delivery-zone/mealtime/reservation creates `[server]` `[~30 LOC]`
+- [x] **T1.3** Add the one-shot `migrate` service (builder target, runs deploy + seed) to `docker-compose.yml` `[infra]` `[~12 LOC]` — depends: T1.1, T1.2
+- [x] **T1.4** Gate `server` on `migrate` completion; add `PUBLIC_URL` + server healthcheck; make `admin`/`storefront` wait for `server: service_healthy` `[infra]` `[~15 LOC]` — depends: T1.3
 
-### Phase 2: Config & convenience
+> **Session notes**: `db:deploy` added. Seed made re-run-safe via count-guards (delivery zones, reviews, reservation, orders loop condition uses `existingSeedOrders === 0`) and find-or-create for mealtimes (preserves `lunch`/`dinner` refs used by the idempotent `menuItemMealtime.createMany`). `docker-compose.yml`: one-shot `migrate` service (`target: builder`, runs `db:deploy` + `db:seed`); `server` gated on `migrate: service_completed_successfully` + postgres healthy, with a `wget` healthcheck and `PUBLIC_URL: http://localhost:5174`; `admin`/`storefront` wait for `server: service_healthy`. Verified: `docker compose config` valid, seed `tsc` clean, 306 tests pass. **Not run** (Docker daemon socket is permission-denied in this env): the actual `docker compose up`/build.
+
+### Phase 2: Config & convenience ✅
 <!-- depends: Database lifecycle in Docker | packages: infra -->
 
-- [ ] **T2.1** Add `.env.example` (POSTGRES_PASSWORD, JWT_SECRET, PUBLIC_URL) `[infra]` `[~6 LOC]`
-- [ ] **T2.2** Parameterise `docker-compose.yml` secrets with `${VAR:-default}` fallbacks — including the password component of `DATABASE_URL` in **both** the `server` and `migrate` services `[infra]` `[~8 LOC]` — depends: T2.1, T1.4
-- [ ] **T2.3** Add root `docker:dev` script to `package.json` `[infra]` `[~1 LOC]`
+- [x] **T2.1** Add `.env.example` (POSTGRES_PASSWORD, JWT_SECRET, PUBLIC_URL) `[infra]` `[~6 LOC]`
+- [x] **T2.2** Parameterise `docker-compose.yml` secrets with `${VAR:-default}` fallbacks — including the password component of `DATABASE_URL` in **both** the `server` and `migrate` services `[infra]` `[~8 LOC]` — depends: T2.1, T1.4
+- [x] **T2.3** Add root `docker:dev` script to `package.json` `[infra]` `[~1 LOC]`
 
-### Phase 3: Smoke test & docs
+> **Session notes**: Root `.env.example` documents `POSTGRES_PASSWORD`, `JWT_SECRET`, `PUBLIC_URL` (with the phone-scanning LAN-IP note). Compose uses `${VAR:-default}` for all three; the `DATABASE_URL` password is parameterised in both `server` and `migrate`. Root `docker:dev` script = `docker compose up --build`. Verified override propagation with `POSTGRES_PASSWORD=… PUBLIC_URL=… docker compose config` (both change) and bare defaults.
+
+### Phase 3: Smoke test & docs ✅
 <!-- depends: Config & convenience | packages: infra, docs -->
 
-- [ ] **T3.1** Add `scripts/smoke.sh` — assert server health, storefront reachable, seeded menu, and `by-token/dev-table-1-qr` resolves `[infra]` `[~30 LOC]` — depends: T1.4, T2.2
-- [ ] **T3.2** Update `packages/docs/guide/installation-docker.md` (auto migrate+seed, `PUBLIC_URL`, ports, smoke check) `[docs]` `[~30 LOC]` — depends: T2.3
-- [ ] **T3.3** Update `packages/docs/self-hosting/docker-compose.md` to note the local-dev `migrate` service vs prod flow `[docs]` `[~15 LOC]` — depends: T3.2
+- [x] **T3.1** Add `scripts/smoke.sh` — assert server health, storefront reachable, seeded menu, and `by-token/dev-table-1-qr` resolves `[infra]` `[~30 LOC]` — depends: T1.4, T2.2
+- [x] **T3.2** Update `packages/docs/guide/installation-docker.md` (auto migrate+seed, `PUBLIC_URL`, ports, smoke check) `[docs]` `[~30 LOC]` — depends: T2.3
+- [x] **T3.3** Update `packages/docs/self-hosting/docker-compose.md` to note the local-dev `migrate` service vs prod flow `[docs]` `[~15 LOC]` — depends: T3.2
+
+> **Session notes**: `scripts/smoke.sh` (executable, `bash -n` clean) checks health, storefront, admin, seeded menu, and `by-token/dev-table-1-qr`. `installation-docker.md` rewritten: config is now optional (root `.env`), migrations+seed run automatically (**removed the previously-broken manual `docker compose exec server npx prisma/tsx` step — that CLI isn't in the `--omit=dev` runtime image**), added `PUBLIC_URL`, docs port 5175, and a smoke-test step. `self-hosting/docker-compose.md` got a callout pointing local-dev users to the auto-migrate flow (prod guide keeps manual migration; prod fix is out of scope).
 
 ## Testing Strategy
 
