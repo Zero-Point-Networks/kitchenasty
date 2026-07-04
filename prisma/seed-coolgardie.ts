@@ -68,8 +68,9 @@ const coolgardieSettings = {
     contactEmail: ADMIN_EMAIL,
     contactPhone: '08 9026 6080',
   },
-  // AU menu prices are GST-inclusive, hence taxRate 0.
-  orderSettings: { enabled: true, enableTipping: false, taxRate: 0 },
+  // AU menu prices are GST-inclusive, hence taxRate 0. Dine-in QR ordering is
+  // the venue's primary flow — tables get a printable random token each (below).
+  orderSettings: { enabled: true, dineInEnabled: true, enableTipping: false, taxRate: 0 },
   reservationSettings: { enabled: true, autoConfirm: false },
 };
 
@@ -277,9 +278,15 @@ const optionsBySlug: Record<string, SeedOption[]> = {
 };
 
 // 10 tables, 44 seats — matches the venue's stated capacity of ~45.
-// No QR token: the Table model has no qrToken field until
-// specs/draft/qr-ordering.md lands (that spec extends this seed).
+// Each table gets a random dine-in QR token: unlike the demo seed's public
+// dev-table-1-qr, a production venue must not ship a guessable token. Format
+// matches generateQrToken() in packages/server/src/lib/qr.ts; the seed stays
+// self-contained rather than importing across the package boundary.
 const TABLE_CAPACITIES = [4, 4, 4, 4, 4, 4, 6, 6, 6, 2];
+
+function newTableQrToken(): string {
+  return randomBytes(18).toString('base64url');
+}
 
 const ALLERGEN_NAMES = ['Gluten', 'Dairy', 'Nuts', 'Eggs', 'Soy', 'Shellfish', 'Fish', 'Sesame'];
 
@@ -460,15 +467,25 @@ async function seedLocation(prisma: PrismaClient): Promise<string> {
   }
 
   for (let i = 0; i < TABLE_CAPACITIES.length; i++) {
-    await prisma.table.upsert({
-      where: { locationId_name: { locationId: location.id, name: `Table ${i + 1}` } },
-      update: {},
-      create: {
-        locationId: location.id,
-        name: `Table ${i + 1}`,
-        capacity: TABLE_CAPACITIES[i],
-      },
+    const name = `Table ${i + 1}`;
+    const existing = await prisma.table.findUnique({
+      where: { locationId_name: { locationId: location.id, name } },
+      select: { id: true, qrToken: true },
     });
+    if (!existing) {
+      await prisma.table.create({
+        data: {
+          locationId: location.id,
+          name,
+          capacity: TABLE_CAPACITIES[i],
+          qrToken: newTableQrToken(),
+        },
+      });
+    } else if (existing.qrToken === null) {
+      // Backfill databases seeded before QR ordering landed; never rotate an
+      // existing token — printed QR codes must stay valid across reseeds.
+      await prisma.table.update({ where: { id: existing.id }, data: { qrToken: newTableQrToken() } });
+    }
   }
 
   return location.id;

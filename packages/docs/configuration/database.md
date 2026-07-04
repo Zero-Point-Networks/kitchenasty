@@ -59,6 +59,7 @@ A production-provisioning seed at `prisma/seed-coolgardie.ts` sets up the real C
 - 🎨 Site branding (name, logo, gold/brown palette, `rustic` storefront template) — the `SiteSettings` upsert **fully overwrites** existing branding so the venue always wins
 - 👤 A Super Admin (`admin@coolgardiegoldrushmotel.com.au`, random password printed once to the console)
 - 📍 The Coolgardie location (pickup only, dinner hours 5:30–7:30 PM daily) with 10 tables and a Dinner mealtime
+- 📱 Dine-in QR ordering enabled, with a **random QR token per table** (printable from **Locations → Tables**; reseeding never rotates existing tokens, so printed codes stay valid)
 - 🍽️ The full 41-item menu (9 categories) with options and allergen tags — no sample orders, reviews, coupons, or gallery images
 - 🖼️ Generated placeholder menu images copied from `prisma/seed-assets/coolgardie-menu/` into `uploads/coolgardie-menu/`
 

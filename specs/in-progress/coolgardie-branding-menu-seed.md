@@ -95,7 +95,7 @@ const coolgardieSettings = {
     defaultCurrency: 'AUD', currencySymbol: '$', currencyPosition: 'before',
     contactEmail: 'admin@coolgardiegoldrushmotel.com.au', contactPhone: '08 9026 6080',
   },
-  orderSettings: { enabled: true, enableTipping: false, taxRate: 0 }, // AU prices are GST-inclusive; dineInEnabled belongs to specs/draft/qr-ordering.md (not yet in orderSettingsSchema)
+  orderSettings: { enabled: true, dineInEnabled: true, enableTipping: false, taxRate: 0 }, // AU prices are GST-inclusive; dineInEnabled added in Phase 5 once qr-ordering landed
   reservationSettings: { enabled: true, autoConfirm: false },
 };
 ```
@@ -107,7 +107,7 @@ All group values conform to the Zod schemas in `settings.controller.ts:171-202` 
 - `Location` slug `coolgardie`: name "Coolgardie Gold Rush Motel", address 49-53 Bayley Street, Coolgardie WA 6429, AU; phone/email as above; lat `-30.9536`, lng `121.1656` (approximate — Bayley St, Coolgardie); `deliveryEnabled: false`, `pickupEnabled: true` (takeout offered, no delivery advertised), `pickupLeadTime: 20`.
 - `OperatingHour` Mon–Sun `17:30`–`19:30` (site: 5:30–7:30 PM daily).
 - One `Mealtime` "Dinner" `17:30`–`19:30`, days `[0..6]`, linked to every menu item.
-- 10 `Table`s (6×4-seat, 3×6-seat, 1×2-seat — 44 seats, matching the venue's stated capacity of ~45). No QR token is seeded — the `Table` model has no `qrToken` field yet; `specs/draft/qr-ordering.md` adds it (and `dev-table-1-qr` seeding) when it lands, and must update this seed alongside the demo seed.
+- 10 `Table`s (6×4-seat, 3×6-seat, 1×2-seat — 44 seats, matching the venue's stated capacity of ~45). Each table is seeded with a **random dine-in QR token** (`randomBytes(18).toString('base64url')`, matching `packages/server/src/lib/qr.ts`); existing tokenless tables are backfilled on reseed and existing tokens are never rotated (printed QR codes stay valid). The demo seed's public `dev-table-1-qr` convention is deliberately not used — it's committed to the repo and would be guessable in production. (Added in Phase 5 after `qr-ordering` landed.)
 - No `DeliveryZone`s.
 
 ### Menu data (verbatim from June 2025 PDF)
@@ -233,6 +233,18 @@ The generated images are intentionally generic, clean food photography placehold
 
 > **Session notes (2026-07-03)**: Generated 41 generic food placeholder images, converted them to 900px-wide WebP assets (3.1 MB total) under `prisma/seed-assets/coolgardie-menu/`, and validated a contact sheet for nonblank/no-text/no-logo outputs. `seedCoolgardie()` now preflights the asset manifest before DB writes, copies assets into runtime upload roots, seeds `/uploads/coolgardie-menu/{slug}.webp`, and preserves any existing non-placeholder venue-uploaded image on reseed. Tests now assert DB image paths, copied file sizes, idempotency, and real-photo preservation; full server suite passes with 325 passed / 18 DB-gated skipped.
 
+### Phase 5: Finalization fixes (QR dine-in provisioning)
+<!-- depends: Generated placeholder menu imagery | packages: server -->
+
+Found during `/wf:finalize`: `qr-ordering` landed on main (Table.qrToken, `orderSettings.dineInEnabled`, QR admin/storefront flows), which made this spec's cross-spec contract ("qr-ordering must extend this seed when it lands") due — but qr-ordering executed on main where this seed doesn't exist. Without the extension, a venue database provisioned by this seed cannot use the QR dine-in flow. Decision (user-confirmed): extend now, with a **random token per table** rather than the demo's public `dev-table-1-qr` convention — the deterministic dev token is committed to the repo, so seeding it in production would let anyone place dine-in orders as Table 1.
+
+- [x] **T5.1** Merge `main` into the branch (brings `Table.qrToken` schema + migration, `dineInEnabled` settings schema, QR flows) `[server]`
+- [x] **T5.2** Extend the integration test: every table has a unique random `qrToken` (≥24 chars, not `dev-table-1-qr`), `orderSettings.dineInEnabled === true`, and tokens are stable across reseed `[server]` `[~30 LOC]` — depends: T5.1
+- [x] **T5.3** Seed a random `qrToken` per table (`randomBytes(18).toString('base64url')`, matching `packages/server/src/lib/qr.ts`) on create, backfill when an existing table's token is null, never overwrite an existing token; add `dineInEnabled: true` to `orderSettings` `[server]` `[~20 LOC]` — depends: T5.1
+- [x] **T5.4** Refresh stale qr-ordering cross-references (seed comments, this spec's Design/Out of Scope, docs) `[docs]` `[~10 LOC]` — depends: T5.3
+
+> **Session notes (2026-07-04, finalize)**: Merged main (`b18b1ae`; conflicts: CHANGELOG merged both Unreleased sections, spec file kept on branch against main's deliberate deletion). TDD: 2 new tests red → table seeding switched from upsert to find/create-with-token/backfill-if-null (tokens never rotated — printed QR codes survive reseeds), `dineInEnabled: true` added → 21/21 green against live PostgreSQL, including token stability across reseed and backfill of pre-QR tables. Token format matches `generateQrToken()` (`lib/qr.ts`) but is inlined to keep the seed self-contained.
+
 ## Testing Strategy
 
 ### Unit Tests
@@ -264,7 +276,7 @@ Manual verification during `/wf:develop`: run `npm run db:seed:coolgardie -w pac
 - Venue-owned menu item photography — generated placeholders are seeded only until the venue uploads real photos through admin.
 - Any storefront template/code changes — branding is achieved purely with existing `SiteSettings` fields and the existing `rustic` template.
 - Accommodation/rooms content from the motel website — this platform covers the restaurant only.
-- QR table tokens and `orderSettings.dineInEnabled` — the schema/settings fields don't exist yet; `specs/draft/qr-ordering.md` owns them and must extend this seed (Table 1 token, dine-in flag) when it lands.
+- ~~QR table tokens and `orderSettings.dineInEnabled`~~ — was deferred to `qr-ordering`; that spec landed on main mid-flight, so the extension was pulled back in scope and delivered as Phase 5 (random token per table, dine-in enabled).
 - Payments configuration (Stripe/Pinch) — covered by `specs/draft/pinch-payments-provider.md`.
 - Modifying or removing the demo seed `prisma/seed.ts`.
 - Real table/floor-plan layout for the 45-seat room — generic 10-table split for now.

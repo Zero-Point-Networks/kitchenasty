@@ -129,6 +129,25 @@ describe.skipIf(!hasDb)('Coolgardie venue seed - Integration Tests', () => {
       expect(tables).toHaveLength(10);
       expect(tables.reduce((sum, t) => sum + t.capacity, 0)).toBe(44);
     });
+
+    it('assigns each table a unique random QR token (never the public dev token)', async () => {
+      const tables = await prisma.table.findMany({ where: { locationId } });
+      for (const table of tables) {
+        expect(table.qrToken).toBeTruthy();
+        expect(table.qrToken).not.toBe('dev-table-1-qr');
+        // randomBytes(18).toString('base64url') → 24 chars, matching lib/qr.ts
+        expect(table.qrToken?.length).toBeGreaterThanOrEqual(24);
+      }
+      expect(new Set(tables.map((t) => t.qrToken)).size).toBe(tables.length);
+    });
+  });
+
+  describe('order settings', () => {
+    it('enables dine-in QR ordering', async () => {
+      const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+      const order = settings?.orderSettings as Record<string, unknown>;
+      expect(order.dineInEnabled).toBe(true);
+    });
   });
 
   describe('menu', () => {
@@ -246,6 +265,22 @@ describe.skipIf(!hasDb)('Coolgardie venue seed - Integration Tests', () => {
       } finally {
         await prisma.menuItem.update({ where: { slug }, data: { image: placeholderImage } });
       }
+    });
+
+    it('keeps table QR tokens stable across reseed', async () => {
+      const byName = (rows: Array<{ name: string; qrToken: string | null }>): Array<[string, string | null]> =>
+        rows.map((r): [string, string | null] => [r.name, r.qrToken]).sort((a, b) => a[0].localeCompare(b[0]));
+
+      const before = await prisma.table.findMany({
+        where: { locationId },
+        select: { name: true, qrToken: true },
+      });
+      await seedCoolgardie(prisma);
+      const after = await prisma.table.findMany({
+        where: { locationId },
+        select: { name: true, qrToken: true },
+      });
+      expect(byName(after)).toEqual(byName(before));
     });
 
     it('re-running the seed leaves seeded row counts unchanged', async () => {
