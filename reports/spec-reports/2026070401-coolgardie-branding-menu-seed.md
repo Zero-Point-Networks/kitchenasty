@@ -36,7 +36,7 @@ Finalization of the venue seed. The deep code audit found the implementation cle
 ### Documentation
 - `packages/docs/configuration/database.md`: venue-seed section notes QR tokens and never-rotate semantics
 - `CHANGELOG.md`: venue-seed entry merged with main's Unreleased section; now mentions QR provisioning
-- `specs/in-progress/coolgardie-branding-menu-seed.md`: Phase 5 added and checked; Design/Out of Scope updated
+- `specs/completed/coolgardie-branding-menu-seed.md`: Phase 5 added and checked; Design/Out of Scope updated
 
 ## Test Results
 

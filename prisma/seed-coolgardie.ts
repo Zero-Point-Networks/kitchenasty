@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 // Venue seed for the Coolgardie Gold Rush Motel restaurant.
 // Source: https://www.coolgardiegoldrushmotel.com.au/restaurant-coolgardie
 // and the venue's June 2025 menu PDF (captured in
-// specs/in-progress/coolgardie-branding-menu-seed.md).
+// specs/completed/coolgardie-branding-menu-seed.md).
 //
 // Intended for a fresh database (production provisioning) — idempotent, and
 // additive to the demo seed (prisma/seed.ts), which stays untouched.

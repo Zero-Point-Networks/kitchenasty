@@ -47,7 +47,7 @@ Preconditions: a running PostgreSQL with migrations applied (`DATABASE_URL` set)
 ### Documentation
 - `packages/docs/configuration/database.md`: "Venue seed: Coolgardie Gold Rush Motel" section with fresh-DB usage note and generated-placeholder image behavior
 - `CHANGELOG.md`: `[Unreleased]` Added entry, including generated placeholder menu imagery
-- `specs/in-progress/coolgardie-branding-menu-seed.md`: moved from draft, aligned with current schema (see Decisions), all 15 tasks checked, session notes per phase
+- `specs/completed/coolgardie-branding-menu-seed.md`: moved from draft, aligned with current schema (see Decisions), all 15 tasks checked, session notes per phase
 - `specs/draft/repair-eslint-config.md` **(NEW)**: draft spec for the pre-existing repo-wide ESLint breakage found this session
 
 ## Test Results
