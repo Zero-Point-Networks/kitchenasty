@@ -14,7 +14,7 @@ Basic restaurant configuration:
 |-------|-------------|
 | `contactEmail` | 📧 Public contact email address |
 | `contactPhone` | 📱 Public contact phone number |
-| `timezone` | 🕐 IANA timezone (e.g. `America/New_York`) |
+| `timezone` | 🕐 IANA timezone selected from the browser-supported list, ordered by region (e.g. `America/New_York`) |
 | `distanceUnit` | 📏 `km` or `mi` |
 | `defaultCurrency` | 💱 3-letter currency code (e.g. `USD`) |
 | `currencySymbol` | 💲 Symbol displayed with prices (e.g. `$`) |
@@ -36,6 +36,7 @@ Online ordering configuration:
 | `enableTipping` | 💰 Show tipping options at checkout |
 | `tipOptions` | 💵 Array of tip percentages (e.g. `[10, 15, 20, 25]`) |
 | `taxRate` | 🧾 Tax rate percentage |
+| `dineInEnabled` | 🎟️ Enable/disable [QR / dine-in ordering](/features/qr-ordering) |
 
 ### 🪑 Reservations
 

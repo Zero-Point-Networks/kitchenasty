@@ -1,6 +1,6 @@
 # QR Ordering UX Polish
 
-## Status: Draft
+## Status: In Progress
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
@@ -121,29 +121,40 @@ This directly fixes the "scan just goes to the menu with no feedback" confusion.
 
 > `[infra]` is not used here. Tags are workspace packages from the profile.
 
-### Phase 1: Server — read-only QR endpoint
+### Phase 1: Server — read-only QR endpoint ✅
 <!-- packages: server -->
 
-- [ ] **T1.1** Add `getTableQr` to `table.controller.ts` + `GET /:locationId/tables/:tableId/qr` route in `location.routes.ts` `[server]` `[~25 LOC]`
-- [ ] **T1.2** Integration tests in `table.test.ts`: GET returns `{qrToken,url}` for a table with a token; 404 for a table without one / unknown table; staff-auth required `[server]` `[~30 LOC]` — depends: T1.1
+- [x] **T1.1** Add `getTableQr` to `table.controller.ts` + `GET /:locationId/tables/:tableId/qr` route in `location.routes.ts` `[server]` `[~25 LOC]`
+- [x] **T1.2** Integration tests in `table.test.ts`: GET returns `{qrToken,url}` for a table with a token; 404 for a table without one / unknown table; staff-auth required `[server]` `[~30 LOC]` — depends: T1.1
 
-### Phase 2: Admin — view vs regenerate
+> **Session notes**: `getTableQr` (read-only) returns `{ qrToken, url: tableQrUrl(qrToken) }`, 404 when the table has no token or doesn't exist; asserts `table.update` is never called. `GET .../qr` route registered before `POST .../qr` (method-distinct, no collision). TDD: 4 tests written first (Red), then impl. 27 table tests pass; server type-check clean.
+
+### Phase 2: Admin — view vs regenerate ✅
 <!-- depends: Server — read-only QR endpoint | packages: admin -->
 
-- [ ] **T2.1** `TableList.tsx`: `View QR` (GET) when `qrToken` present, `Generate QR` (POST) when absent, and a `Regenerate` button inside the modal (POST + confirm) `[admin]` `[~50 LOC]` — depends: T1.1
+- [x] **T2.1** `TableList.tsx`: `View QR` (GET) when `qrToken` present, `Generate QR` (POST) when absent, and a `Regenerate` button inside the modal (POST + confirm) `[admin]` `[~50 LOC]` — depends: T1.1
+
+> **Session notes**: Row action is now **View QR** (GET, no rotation) when the table has a token, else **Generate QR** (POST). `handleViewQr` GETs `{qrToken,url}` and renders the QR; the modal gained a **Regenerate** button that calls `handleGenerateQr` (keeps the "invalidates printed copies" confirm). `QrModalState` gained `table` so Regenerate has its target. Admin `tsc -b` clean. (No admin unit-test runner; covered by type-check + e2e/manual.)
 
 ### Phase 3: Storefront — visible & durable dine-in context
 <!-- packages: storefront -->
 <!-- Independent of Phases 1-2 (client-only) — can be worked in parallel. -->
 
-- [ ] **T3.1** Persist `dineIn` to `sessionStorage` in `CartContext.tsx` (hydrate on init, write-through on set, remove on clear) `[storefront]` `[~20 LOC]`
-- [ ] **T3.2** `DineInBanner` component rendered in `Layout.tsx`; shows "Ordering for {tableName}" + "Leave table"; i18n keys in `en.json` `[storefront]` `[~40 LOC]` — depends: T3.1
+- [x] **T3.1** Persist `dineIn` to `sessionStorage` in `CartContext.tsx` (hydrate on init, write-through on set, remove on clear) `[storefront]` `[~20 LOC]`
+- [x] **T3.2** `DineInBanner` component rendered in `Layout.tsx`; shows "Ordering for {tableName}" + "Leave table"; i18n keys in `en.json` `[storefront]` `[~40 LOC]` — depends: T3.1
+
+> **Session notes**: `CartContext` now hydrates `dineIn` from `sessionStorage` (lazy init, try/catch) and write-throughs via a `setDineIn` wrapper; `clear()` calls the wrapper so the key is removed on order placement. New `DineInBanner` (default export, `useCart`) renders "Ordering for **{tableName}**" + a "Leave table" action (`setDineIn(null)`, keeps the cart), or nothing when not dine-in; mounted in `Layout` under `<Header/>`. i18n keys `dineInBanner.ordering/leave` in `en.json` (other locales fall back to en). Storefront `tsc -b` clean.
 
 ### Phase 4: Tests & docs
 <!-- depends: Storefront — visible & durable dine-in context | packages: storefront, docs -->
 
-- [ ] **T4.1** Extend `e2e/storefront/dine-in.spec.ts`: after visiting `/t/dev-table-1-qr`, the "Ordering for Table 1" banner is visible on `/menu` `[storefront]` `[~20 LOC]` — depends: T3.2
-- [ ] **T4.2** Update `packages/docs/features/qr-ordering.md`: admins can View a table's QR without regenerating; note the on-screen dine-in banner `[docs]` `[~15 LOC]` — depends: T2.1, T3.2
+- [x] **T4.1** Extend `e2e/storefront/dine-in.spec.ts`: after visiting `/t/dev-table-1-qr`, the "Ordering for Table 1" banner is visible on `/menu` `[storefront]` `[~20 LOC]` — depends: T3.2
+- [x] **T4.2** Update `packages/docs/features/qr-ordering.md`: admins can View a table's QR without regenerating; note the on-screen dine-in banner `[docs]` `[~15 LOC]` — depends: T2.1, T3.2
+
+> **Session notes**: e2e adds a "persistent dine-in banner" test (banner visible on `/menu` after scan + survives reload). Docs: updated How-it-works (banner), the QR admin actions (View vs Generate; Regenerate moved into the modal), and added the read-only `GET .../qr` to the API reference. E2E requires a running stack; not executed here. Full suite: **310 tests pass**; server/admin/storefront type-check clean.
+
+### Environment note
+> Developed in a dedicated **git worktree** (`/home/russell/kitchenasty-qrux`) after a second concurrent session switched the shared main working tree mid-Phase-3. Phases 1-2 were already committed/pushed; Phases 3-4 completed in the isolated worktree. No work lost.
 
 ## Testing Strategy
 
@@ -193,4 +204,4 @@ Admin (`TableList`) has no unit-test runner in the repo; covered by `tsc -b` + m
 
 ## Documentation Impact
 
-- [ ] `packages/docs/features/qr-ordering.md` — admins can view a table's QR without regenerating; diners see a persistent "Ordering for {table}" banner
+- [x] `packages/docs/features/qr-ordering.md` — admins can view a table's QR without regenerating; diners see a persistent "Ordering for {table}" banner

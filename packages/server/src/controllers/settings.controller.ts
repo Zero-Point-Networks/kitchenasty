@@ -189,6 +189,7 @@ const orderSettingsSchema = z.object({
   enableTipping: z.boolean().optional(),
   tipOptions: z.array(z.number()).optional(),
   taxRate: z.number().min(0).max(100).optional(),
+  dineInEnabled: z.boolean().optional(),
 });
 
 const reservationSettingsSchema = z.object({

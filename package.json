@@ -13,6 +13,7 @@
     "dev:mobile": "npm run start -w packages/mobile",
     "build": "npm run build -w packages/shared && npm run build -w packages/server && npm run build -w packages/admin && npm run build -w packages/storefront",
     "build:docs": "npm run build -w packages/docs",
+    "docker:dev": "docker compose up --build",
     "lint": "eslint packages/*/src --ext .ts,.tsx",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "npm run test -w packages/shared && npm run test:unit -w packages/server",

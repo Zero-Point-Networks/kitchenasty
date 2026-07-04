@@ -119,9 +119,10 @@ _(Starter list inferred from features — tune as flows are formalized.)_
 ## Language Standards
 
 ### TypeScript
-- **Naming**: kebab-case filenames (`data-helper.ts`); PascalCase React components and types; camelCase functions and variables.
-- **Forbidden**: `any` (prefer `unknown` or precise types); default exports for React components; class components.
+- **Naming**: PascalCase React components and types; camelCase functions and variables. Server uses dot-suffixed filenames (`order.controller.ts`, `payment.routes.ts`); React pages/components are PascalCase files (`Checkout.tsx`).
+- **Forbidden**: `any` (prefer `unknown` or precise types); class components.
 - **Required**: explicit return types on exported functions; Zod schemas for external/request input validation on the server; `strict` TypeScript (already enabled in root `tsconfig.json`).
+- **Repo convention**: React page/route components use **default exports** (every page in `admin`/`storefront` does, and the routers import them as default) — do not flag default exports on components in this repo. Non-component modules (libs, utils) use named exports.
 
 ## Code Quality Metrics
 

@@ -168,7 +168,7 @@ npm install
 ### 2. Start the database
 
 ```bash
-docker compose up -d
+docker compose up -d postgres   # just PostgreSQL, for hot-reload dev below
 ```
 
 ### 3. Set up environment & migrate
@@ -186,6 +186,8 @@ npm run dev:server      # API server → http://localhost:3000
 npm run dev:admin       # Admin panel → http://localhost:5173
 npm run dev:storefront  # Storefront  → http://localhost:5174
 ```
+
+> **Prefer the whole stack in Docker?** `docker compose up --build` (or `npm run docker:dev`) runs everything — API, admin, storefront, docs, and PostgreSQL — and applies migrations + seed **automatically**. See [Install with Docker](https://mighty840.github.io/kitchenasty/guide/installation-docker).
 
 ---
 

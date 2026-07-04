@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import QRCode from 'qrcode';
 import { api } from '../lib/api.js';
 
 interface Table {
@@ -7,7 +8,15 @@ interface Table {
   name: string;
   capacity: number;
   isActive: boolean;
+  qrToken?: string | null;
   _count: { reservations: number };
+}
+
+interface QrModalState {
+  table: Table;
+  tableName: string;
+  url: string;
+  dataUrl: string;
 }
 
 interface LocationInfo {
@@ -28,6 +37,7 @@ export default function TableList() {
   const [formCapacity, setFormCapacity] = useState(2);
   const [formActive, setFormActive] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [qrModal, setQrModal] = useState<QrModalState | null>(null);
 
   const fetchTables = () => {
     setLoading(true);
@@ -76,10 +86,65 @@ export default function TableList() {
       }
       setShowForm(false);
       fetchTables();
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to save table');
     }
     setSaving(false);
+  };
+
+  // Read-only: show the table's existing QR without rotating the token.
+  const handleViewQr = async (table: Table) => {
+    try {
+      const res = await api.get<{ data: { qrToken: string; url: string } }>(
+        `/locations/${locationId}/tables/${table.id}/qr`,
+      );
+      const { url } = res.data;
+      const dataUrl = await QRCode.toDataURL(url, { width: 320, margin: 2 });
+      setQrModal({ table, tableName: table.name, url, dataUrl });
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to load QR code');
+    }
+  };
+
+  const handleGenerateQr = async (table: Table) => {
+    if (table.qrToken && !confirm(
+      `Table "${table.name}" already has a QR code. Generating a new one invalidates any printed copies. Continue?`,
+    )) return;
+
+    try {
+      const res = await api.post<{ data: { qrToken: string; url: string } }>(
+        `/locations/${locationId}/tables/${table.id}/qr`,
+        {},
+      );
+      const { qrToken, url } = res.data;
+      const dataUrl = await QRCode.toDataURL(url, { width: 320, margin: 2 });
+      setTables((prev) => prev.map((t) => (t.id === table.id ? { ...t, qrToken } : t)));
+      setQrModal({ table: { ...table, qrToken }, tableName: table.name, url, dataUrl });
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to generate QR code');
+    }
+  };
+
+  const handlePrintQr = (modal: QrModalState) => {
+    const win = window.open('', '_blank', 'width=420,height=560');
+    if (!win) return;
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const name = esc(modal.tableName);
+    win.document.write(
+      `<html><head><title>QR — ${name}</title></head>` +
+      `<body style="text-align:center;font-family:sans-serif;padding:24px">` +
+      `<h2>${name}</h2>` +
+      `<p>Scan to order</p>` +
+      `<img src="${modal.dataUrl}" alt="QR code for ${name}" style="width:320px;height:320px" />` +
+      `<p style="word-break:break-all;color:#555;font-size:12px">${esc(modal.url)}</p>` +
+      `</body></html>`,
+    );
+    win.document.close();
+    win.onload = () => {
+      win.focus();
+      win.print();
+    };
   };
 
   const handleDelete = async (id: string, name: string) => {
@@ -87,8 +152,8 @@ export default function TableList() {
     try {
       await api.delete(`/locations/${locationId}/tables/${id}`);
       setTables((prev) => prev.filter((t) => t.id !== id));
-    } catch (err: any) {
-      alert(err.message);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Failed to delete table');
     }
   };
 
@@ -234,6 +299,9 @@ export default function TableList() {
                     {table._count.reservations}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm space-x-3">
+                    <button onClick={() => (table.qrToken ? handleViewQr(table) : handleGenerateQr(table))} className="text-primary-600 hover:text-primary-900 font-medium" aria-label={`${table.qrToken ? 'View' : 'Generate'} QR code for table ${table.name}`}>
+                      {table.qrToken ? 'View QR' : 'Generate QR'}
+                    </button>
                     <button onClick={() => openEditForm(table)} className="text-primary-600 hover:text-primary-900 font-medium" aria-label={`Edit table ${table.name}`}>
                       Edit
                     </button>
@@ -245,6 +313,38 @@ export default function TableList() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {qrModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setQrModal(null)}>
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">{qrModal.tableName}</h3>
+            <p className="text-sm text-gray-500 mb-4">Diners scan this to order from the table.</p>
+            <img src={qrModal.dataUrl} alt={`QR code for ${qrModal.tableName}`} className="mx-auto w-64 h-64" />
+            <p className="text-xs text-gray-400 break-all mt-3">{qrModal.url}</p>
+            <div className="flex gap-3 justify-center mt-5">
+              <button
+                onClick={() => handlePrintQr(qrModal)}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700"
+              >
+                Print
+              </button>
+              <button
+                onClick={() => handleGenerateQr(qrModal.table)}
+                className="px-4 py-2 border border-amber-300 text-amber-700 rounded-lg text-sm font-medium hover:bg-amber-50"
+              >
+                Regenerate
+              </button>
+              <button
+                onClick={() => setQrModal(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -7,10 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+#### Local Docker Setup
+- `docker compose up` now brings up a fully working stack out of the box — database migrations and demo data are applied **automatically**, so there's no manual setup step (the previous manual instructions no longer worked with the slimmed-down images)
+- Added a smoke-test script (`scripts/smoke.sh`) to verify a running stack
+- New `PUBLIC_URL` setting controls the storefront origin that dine-in QR codes point to
+
 ### Added
 
+#### QR / Dine-in Ordering
+- Diners can scan a per-table QR code to open the menu already bound to their table and order without staff involvement, as a new **dine-in** order type
+- At checkout, dine-in orders can be paid online or **at the counter**, and can be placed anonymously (no account or contact details required)
+- Admins can generate and print a QR code for each table from **Locations → Tables** (regenerating a code warns that printed copies are invalidated)
+- Dine-in ordering is gated by a new **Dine-in** toggle in Order Settings
+- Staff can filter orders by dine-in and see a distinct dine-in badge in the order list and Kitchen Display
+- New documentation: "QR / Dine-in Ordering" feature and API reference pages
+
 #### Coolgardie Gold Rush Motel venue seed
-- New standalone seed `prisma/seed-coolgardie.ts` (run via `npm run db:seed:coolgardie -w packages/server`) provisioning the real venue: branding/settings (rustic template, AUD, Australia/Perth), Coolgardie location with dinner hours and 10 tables, and the full 41-item June 2025 menu with options and allergen tags
+- New standalone seed `prisma/seed-coolgardie.ts` (run via `npm run db:seed:coolgardie -w packages/server`) provisioning the real venue: branding/settings (rustic template, AUD, Australia/Perth), Coolgardie location with dinner hours, dine-in QR ordering enabled with a random QR token per table, and the full 41-item June 2025 menu with options and allergen tags
 - Generated placeholder images for all 41 Coolgardie menu items, copied into `/uploads/coolgardie-menu/` by the venue seed until real venue photography is uploaded
 - The demo seed (`prisma/seed.ts`) is unchanged; the venue seed is additive and idempotent, intended for a fresh database
 - DB-gated integration test (`packages/server/src/__tests__/integration/seed-coolgardie.test.ts`) — runs when `DATABASE_URL` is set, skips otherwise

@@ -9,27 +9,31 @@ git clone https://github.com/kitchenasty/kitchenasty.git
 cd kitchenasty
 ```
 
-## 2. ⚙️ Configure Environment
+## 2. ⚙️ Configure Environment (optional)
+
+The stack runs with sensible defaults out of the box — no configuration required. To override, copy the root `.env.example` to `.env` (Docker Compose loads it automatically):
 
 ```bash
-cp packages/server/.env.example packages/server/.env
+cp .env.example .env
 ```
 
-Edit `packages/server/.env` and set at minimum:
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `POSTGRES_PASSWORD` | `kitchenasty` | Database password |
+| `JWT_SECRET` | `change-this-to-a-random-secret` | API token signing secret |
+| `PUBLIC_URL` | `http://localhost:5174` | Storefront origin; **dine-in QR codes point here** |
 
-```dotenv
-DATABASE_URL=postgresql://kitchenasty:kitchenasty@postgres:5432/kitchenasty
-JWT_SECRET=your-random-secret-here
-CORS_ORIGINS=http://localhost:5173,http://localhost:5174
-```
+> **Scanning QR codes from a phone?** Set `PUBLIC_URL` to your machine's LAN origin (e.g. `http://192.168.1.50:5174`) so generated QR codes resolve on the device.
 
 See [Environment Variables](/configuration/environment-variables) for the full reference.
 
 ## 3. 🚀 Start Services
 
 ```bash
-docker compose up --build
+docker compose up --build      # or: npm run docker:dev
 ```
+
+Migrations and the demo seed run **automatically** on startup via a one-shot `migrate` service — the API server waits for it to finish before booting. No manual DB setup needed. (The seed is idempotent, so it's safe to re-run `up`.)
 
 This starts:
 
@@ -38,16 +42,18 @@ This starts:
 | API Server | http://localhost:3000 |
 | Admin Dashboard | http://localhost:5173 |
 | Storefront | http://localhost:5174 |
+| Docs | http://localhost:5175 |
 | PostgreSQL | localhost:5432 |
 
-## 4. 🗄️ Run Migrations & Seed
+## 4. ✅ Verify (smoke test)
 
-In a separate terminal, run the database setup inside the server container:
+Once the server is healthy, confirm the stack end-to-end:
 
 ```bash
-docker compose exec server npx prisma migrate deploy --schema ../../prisma/schema.prisma
-docker compose exec server npx tsx ../../prisma/seed.ts
+./scripts/smoke.sh
 ```
+
+It checks server health, the storefront/admin pages, that the menu is seeded, and that the demo dine-in QR token (`dev-table-1-qr`) resolves.
 
 ## 5. ✅ Access the Platform
 
