@@ -69,8 +69,10 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 ### Phase 1: Settings & template
 <!-- packages: server -->
 
-- [ ] **T1.1** Add `orderReadyEmail(...)` template to `packages/server/src/lib/email.ts` `[server]` `[~30 LOC]`
-- [ ] **T1.2** Add `notificationSettings` group: `Json?` column on `SiteSettings` + Prisma migration, `SettingsField` member, Zod schema, get/update handlers, `/settings/notifications` routes `[server]` `[~40 LOC]`
+- [x] **T1.1** Add `orderReadyEmail(...)` template to `packages/server/src/lib/email.ts` `[server]` `[~30 LOC]`
+- [x] **T1.2** Add `notificationSettings` group: `Json?` column on `SiteSettings` + Prisma migration, `SettingsField` member, Zod schema, get/update handlers, `/settings/notifications` routes `[server]` `[~40 LOC]`
+
+> **Session notes**: `orderReadyEmail({ orderNumber, tableName? })` in `email.ts` (after `orderStatusEmail`); table label renders as "Collect at: <label>" only when truthy — template contains no other "Table" text (tests assert its absence). `notificationSettings Json?` column on `SiteSettings` + handwritten migration `20260705134500_add_notification_settings` (no local DB; SQL matches generator output style). Controller follows the generic group pattern (`SettingsField` union + Zod + get/update handlers); routes `GET/PUT /settings/notifications` at MANAGER+ like order settings. Tests: 5 new in `unit/email.test.ts` (39 unit total, green). Defaults (email/push on, SMS off) are NOT stored in the DB — Phase 2's helper owns default resolution.
 
 ### Phase 2: Notification fan-out
 <!-- depends: Settings & template | packages: server -->

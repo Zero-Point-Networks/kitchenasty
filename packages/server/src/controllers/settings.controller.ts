@@ -148,7 +148,8 @@ type SettingsField =
   | 'mailSettings'
   | 'paymentSettings'
   | 'reviewSettings'
-  | 'advancedSettings';
+  | 'advancedSettings'
+  | 'notificationSettings';
 
 async function getSettingsGroup(field: SettingsField): Promise<Record<string, any>> {
   const settings = await getOrCreateSettings();
@@ -234,6 +235,12 @@ const advancedSettingsSchema = z.object({
   maintenanceMode: z.boolean().optional(),
   maintenanceMessage: z.string().optional(),
   enableRateLimiting: z.boolean().optional(),
+});
+
+const notificationSettingsSchema = z.object({
+  readyEmailEnabled: z.boolean().optional(),
+  readySmsEnabled: z.boolean().optional(),
+  readyPushEnabled: z.boolean().optional(),
 });
 
 // ============================================================
@@ -432,6 +439,25 @@ export async function updateReviewSettings(req: Request, res: Response): Promise
 // ============================================================
 // ADVANCED SETTINGS
 // ============================================================
+
+// ============================================================
+// NOTIFICATION SETTINGS
+// ============================================================
+
+export async function getNotificationSettings(_req: Request, res: Response): Promise<void> {
+  const data = await getSettingsGroup('notificationSettings');
+  res.json({ success: true, data });
+}
+
+export async function updateNotificationSettings(req: Request, res: Response): Promise<void> {
+  const parsed = notificationSettingsSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, error: parsed.error.errors });
+    return;
+  }
+  const data = await updateSettingsGroup('notificationSettings', parsed.data);
+  res.json({ success: true, data });
+}
 
 export async function getAdvancedSettings(_req: Request, res: Response): Promise<void> {
   const data = await getSettingsGroup('advancedSettings');
