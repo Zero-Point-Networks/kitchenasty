@@ -32,7 +32,7 @@ PENDING → CONFIRMED → PREPARING → READY → DELIVERED / PICKED_UP
 | `PICKED_UP` | 🤝 Customer picked up the order |
 | `CANCELLED` | ❌ Order cancelled |
 
-Staff update order status via `PATCH /api/orders/:id/status`.
+Staff update order status via `PATCH /api/orders/:id/status`. Status changes notify the customer — the READY transition on pickup/dine-in orders sends a dedicated multi-channel message; see [Order Notifications](/features/order-notifications).
 
 ## 👤 Guest Checkout
 
