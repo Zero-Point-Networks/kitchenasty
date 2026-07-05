@@ -182,6 +182,27 @@ Masked secret values (containing `...`) are preserved on save.
 
 ---
 
+## 🔔 Notification Settings
+
+### `GET /api/settings/notifications`
+**Auth:** MANAGER, SUPER_ADMIN
+
+### `PUT /api/settings/notifications`
+**Auth:** MANAGER, SUPER_ADMIN
+
+**Body:**
+```json
+{
+  "readyEmailEnabled": true,
+  "readySmsEnabled": false,
+  "readyPushEnabled": true
+}
+```
+
+Toggles for the [ready-for-collection fan-out](/features/order-notifications). All fields are optional booleans; omitted fields keep their stored value (partial updates merge). Defaults when never saved: email and push on, SMS off. No secret masking applies (no sensitive fields).
+
+---
+
 ## 🔧 Advanced Settings
 
 ### `GET /api/settings/advanced`
