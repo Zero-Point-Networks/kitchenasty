@@ -111,6 +111,18 @@ describe('notifyOrderReady', () => {
       expect(mockedSendSMS.mock.calls[0][1]).toContain('Room 12');
     });
 
+    it('prefers the customer phone over the guest phone', async () => {
+      mockSettings({ readySmsEnabled: true });
+      await notifyOrderReady(customerOrder);
+      expect(mockedSendSMS.mock.calls[0][0]).toBe('+61411111111');
+    });
+
+    it('uses the configured site name in the SMS body', async () => {
+      mockSettings({ readySmsEnabled: true }, 'Coolgardie Gold Rush');
+      await notifyOrderReady(guestOrder);
+      expect(mockedSendSMS.mock.calls[0][1]).toContain('Coolgardie Gold Rush');
+    });
+
     it('does not SMS when enabled but no phone exists', async () => {
       mockSettings({ readySmsEnabled: true });
       await notifyOrderReady({ ...guestOrder, guestPhone: null });
@@ -132,6 +144,11 @@ describe('notifyOrderReady', () => {
       mockSettings({ readyPushEnabled: false });
       await notifyOrderReady(customerOrder);
       expect(mockedSendExpoPush).not.toHaveBeenCalled();
+    });
+
+    it('includes the table label in the push body when present', async () => {
+      await notifyOrderReady({ ...customerOrder, table: { name: 'Table 7' } });
+      expect(mockedSendExpoPush.mock.calls[0][2]).toContain('Table 7');
     });
 
     it('does not push for guest orders with no token', async () => {
