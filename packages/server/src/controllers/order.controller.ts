@@ -4,6 +4,7 @@ import prisma from '../lib/db.js';
 import { emitNewOrder, emitOrderStatusUpdate } from '../lib/socket.js';
 import { isPointInPolygon } from '../lib/geo.js';
 import { sendEmail, orderConfirmationEmail, orderStatusEmail } from '../lib/email.js';
+import { notifyOrderReady } from '../lib/notifications.js';
 import { auditLog } from '../lib/audit.js';
 
 const orderItemOptionSchema = z.object({
@@ -520,24 +521,37 @@ export async function updateOrderStatus(req: Request<{ id: string }>, res: Respo
     data: { status },
     include: {
       items: { include: { options: true } },
+      customer: { select: { email: true, phone: true, expoPushToken: true } },
+      table: { select: { name: true } },
     },
   });
 
   auditLog(req, { action: 'update', entity: 'Order', entityId: id, details: { status, previousStatus: order.status } });
 
-  emitOrderStatusUpdate({
-    id: updated.id,
-    orderNumber: updated.orderNumber,
-    status: updated.status,
-    orderType: updated.orderType,
-    customerId: updated.customerId,
-  });
+  // READY on a collectable order gets a dedicated fan-out (email/SMS/push);
+  // the generic email and push are suppressed for it so nothing double-fires.
+  const readyForCollection = status === 'READY' && ['PICKUP', 'DINE_IN'].includes(updated.orderType);
 
-  // Send status update email
-  const recipientEmail = order.customer?.email || order.guestEmail;
-  if (recipientEmail) {
-    const emailContent = orderStatusEmail({ orderNumber: order.orderNumber, status });
-    sendEmail({ to: recipientEmail, ...emailContent }).catch(() => {});
+  emitOrderStatusUpdate(
+    {
+      id: updated.id,
+      orderNumber: updated.orderNumber,
+      status: updated.status,
+      orderType: updated.orderType,
+      customerId: updated.customerId,
+    },
+    { suppressPush: readyForCollection },
+  );
+
+  if (readyForCollection) {
+    notifyOrderReady(updated).catch(() => {});
+  } else {
+    // Send status update email
+    const recipientEmail = order.customer?.email || order.guestEmail;
+    if (recipientEmail) {
+      const emailContent = orderStatusEmail({ orderNumber: order.orderNumber, status });
+      sendEmail({ to: recipientEmail, ...emailContent }).catch(() => {});
+    }
   }
 
   // Emit event for automation rules

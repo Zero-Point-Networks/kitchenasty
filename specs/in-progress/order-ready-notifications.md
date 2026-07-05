@@ -74,11 +74,13 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 
 > **Session notes**: `orderReadyEmail({ orderNumber, tableName? })` in `email.ts` (after `orderStatusEmail`); table label renders as "Collect at: <label>" only when truthy — template contains no other "Table" text (tests assert its absence). `notificationSettings Json?` column on `SiteSettings` + handwritten migration `20260705134500_add_notification_settings` (no local DB; SQL matches generator output style). Controller follows the generic group pattern (`SettingsField` union + Zod + get/update handlers); routes `GET/PUT /settings/notifications` at MANAGER+ like order settings. Tests: 5 new in `unit/email.test.ts` (39 unit total, green). Defaults (email/push on, SMS off) are NOT stored in the DB — Phase 2's helper owns default resolution.
 
-### Phase 2: Notification fan-out
+### Phase 2: Notification fan-out ✅
 <!-- depends: Settings & template | packages: server -->
 
-- [ ] **T2.1** Add `notifyOrderReady(order)` helper (email + SMS + push, best-effort, settings-gated) `[server]` `[~70 LOC]` — depends: T1.1, T1.2
-- [ ] **T2.2** Call `notifyOrderReady` from `updateOrderStatus` on `READY` for `PICKUP`/`DINE_IN`; skip the generic status email for that case and pass `suppressPush` to `emitOrderStatusUpdate` (no double email, no double push) `[server]` `[~20 LOC]` — depends: T2.1
+- [x] **T2.1** Add `notifyOrderReady(order)` helper (email + SMS + push, best-effort, settings-gated) `[server]` `[~70 LOC]` — depends: T1.1, T1.2
+- [x] **T2.2** Call `notifyOrderReady` from `updateOrderStatus` on `READY` for `PICKUP`/`DINE_IN`; skip the generic status email for that case and pass `suppressPush` to `emitOrderStatusUpdate` (no double email, no double push) `[server]` `[~20 LOC]` — depends: T2.1
+
+> **Session notes**: `lib/notifications.ts` exports `notifyOrderReady(order)`, `OrderReadyInfo`, and `READY_NOTIFICATION_DEFAULTS` (email/push on, SMS off) — defaults merge over the stored `notificationSettings` JSON, and a failed settings read falls back to defaults. `socket.ts` now exports `sendExpoPush(token, title, body, data?)` (used by both the generic push and the ready push) and `emitOrderStatusUpdate` takes `{ suppressPush }`. `updateOrderStatus` computes `readyForCollection` (READY + PICKUP/DINE_IN), suppresses generic push + email for that case, and the update query now includes `customer {email, phone, expoPushToken}` and `table {name}` (route is staff-only). Tests: 14 in `unit/notify-order-ready.test.ts` mocking db/email/sms/socket; 53 unit + 310 integration green.
 
 ### Phase 3: Admin & tests
 <!-- depends: Notification fan-out | packages: admin, server -->
