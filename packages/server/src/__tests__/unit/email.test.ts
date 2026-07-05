@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   orderConfirmationEmail,
+  orderReadyEmail,
   orderStatusEmail,
   reservationConfirmationEmail,
 } from '../../lib/email.js';
@@ -59,6 +60,34 @@ describe('Email Templates', () => {
     it('handles cancelled status', () => {
       const result = orderStatusEmail({ orderNumber: 'KA-123', status: 'CANCELLED' });
       expect(result.html).toContain('cancelled');
+    });
+  });
+
+  describe('orderReadyEmail', () => {
+    it('generates a ready-for-collection subject', () => {
+      const result = orderReadyEmail({ orderNumber: 'KA-123' });
+      expect(result.subject).toBe('Order #KA-123 is ready for collection');
+    });
+
+    it('includes ready-for-collection copy and order number', () => {
+      const result = orderReadyEmail({ orderNumber: 'KA-456' });
+      expect(result.html).toContain('KA-456');
+      expect(result.html.toLowerCase()).toContain('ready for collection');
+    });
+
+    it('includes the table label when provided', () => {
+      const result = orderReadyEmail({ orderNumber: 'KA-789', tableName: 'Table 4' });
+      expect(result.html).toContain('Table 4');
+    });
+
+    it('omits table wording when no table label is provided', () => {
+      const result = orderReadyEmail({ orderNumber: 'KA-789' });
+      expect(result.html).not.toContain('Table');
+    });
+
+    it('treats an empty tableName the same as no table', () => {
+      const result = orderReadyEmail({ orderNumber: 'KA-789', tableName: '' });
+      expect(result.html).not.toContain('Table');
     });
   });
 
