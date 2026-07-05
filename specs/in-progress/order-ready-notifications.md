@@ -82,11 +82,15 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 
 > **Session notes**: `lib/notifications.ts` exports `notifyOrderReady(order)`, `OrderReadyInfo`, and `READY_NOTIFICATION_DEFAULTS` (email/push on, SMS off) — defaults merge over the stored `notificationSettings` JSON, and a failed settings read falls back to defaults. `socket.ts` now exports `sendExpoPush(token, title, body, data?)` (used by both the generic push and the ready push) and `emitOrderStatusUpdate` takes `{ suppressPush }`. `updateOrderStatus` computes `readyForCollection` (READY + PICKUP/DINE_IN), suppresses generic push + email for that case, and the update query now includes `customer {email, phone, expoPushToken}` and `table {name}` (route is staff-only). Tests: 14 in `unit/notify-order-ready.test.ts` mocking db/email/sms/socket; 53 unit + 310 integration green.
 
-### Phase 3: Admin & tests
+### Phase 3: Admin & tests ✅
 <!-- depends: Notification fan-out | packages: admin, server -->
 
-- [ ] **T3.1** New `SettingsNotifications.tsx` page (channel toggles) + register in `Settings.tsx` nav `[admin]` `[~50 LOC]` — depends: T1.2
-- [ ] **T3.2** Integration tests: READY fires the right channels per settings; non-READY unaffected `[server]` `[~60 LOC]` — depends: T2.2
+- [x] **T3.1** New `SettingsNotifications.tsx` page (channel toggles) + register in `Settings.tsx` nav `[admin]` `[~50 LOC]` — depends: T1.2
+- [x] **T3.2** Integration tests: READY fires the right channels per settings; non-READY unaffected `[server]` `[~60 LOC]` — depends: T2.2
+
+> **Review pass** (refactorer + code-reviewer + test-auditor): fixed READY→READY idempotency (`statusChanged` gates all side effects — repeated PATCHes no longer re-bill SMS), partial `PUT /settings/notifications` now merges over stored toggles instead of resetting them, status-update response strips `customer`/`table` (no `expoPushToken` exposure; restores pre-feature shape), extracted `resolveContactEmail`, typed `notificationSettingsSchema` against `ReadyChannelToggles`, fixed section banners in `settings.controller.ts`. Test gaps closed: `unit/socket.test.ts` (NEW) exercises the real `suppressPush` guard; added phone-precedence, site-name, push-table-label, READY→READY, and response-sanitization tests. Settings-handler duplication got its own draft spec: `specs/draft/settings-group-handler-factory.md`. 380 server tests green.
+>
+> **Session notes**: `SettingsNotifications.tsx` mirrors `SettingsReviews.tsx` (fetch/save `/api/settings/notifications`, three checkboxes, client defaults mirror `READY_NOTIFICATION_DEFAULTS`); card added to `Settings.tsx` grid (MANAGER+) and route in `main.tsx`. Integration matrix (7 tests) added to `order.test.ts` under "READY fan-out" — required mocking email/sms/socket modules at file top (`emitNewOrder`/`emitOrderStatusUpdate` now mocked for the whole file) and a `setImmediate` flush because `notifyOrderReady` is fire-and-forget. 370 server tests green; admin `tsc -b` clean; docs build clean. eslint is broken repo-wide (pre-existing, tracked by `specs/draft/repair-eslint-config.md`) so lint could not run.
 
 ## Testing Strategy
 
@@ -140,5 +144,5 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 
 ## Documentation Impact
 
-- [ ] `packages/docs/features/` — "Order status notifications" page: ready-for-pickup channels and toggles
-- [ ] `packages/docs/configuration/` — enabling SMS/push for notifications
+- [x] `packages/docs/features/` — "Order status notifications" page: ready-for-pickup channels and toggles (`features/order-notifications.md`, registered in the VitePress sidebar; cross-linked from `features/ordering.md`)
+- [x] `packages/docs/configuration/` — enabling SMS/push for notifications (new "Order-Ready Notifications" section in `configuration/email-sms.md`)
