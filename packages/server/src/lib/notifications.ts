@@ -25,6 +25,14 @@ export const READY_NOTIFICATION_DEFAULTS: ReadyChannelToggles = {
   readyPushEnabled: true,
 };
 
+/** Customer contact wins over guest checkout details; empty strings count as absent. */
+export function resolveContactEmail(order: {
+  customer?: { email: string | null } | null;
+  guestEmail?: string | null;
+}): string | undefined {
+  return order.customer?.email || order.guestEmail || undefined;
+}
+
 async function getReadyConfig(): Promise<{ toggles: ReadyChannelToggles; siteName: string }> {
   try {
     const settings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
@@ -46,8 +54,8 @@ async function getReadyConfig(): Promise<{ toggles: ReadyChannelToggles; siteNam
 export async function notifyOrderReady(order: OrderReadyInfo): Promise<void> {
   const { toggles, siteName } = await getReadyConfig();
 
-  const email = order.customer?.email ?? order.guestEmail;
-  const phone = order.customer?.phone ?? order.guestPhone;
+  const email = resolveContactEmail(order);
+  const phone = order.customer?.phone || order.guestPhone;
   const pushToken = order.customer?.expoPushToken;
   const tableName = order.table?.name || undefined;
   const tableSuffix = tableName ? ` — ${tableName}` : '';

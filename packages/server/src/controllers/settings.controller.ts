@@ -3,6 +3,7 @@ import { z } from 'zod';
 import nodemailer from 'nodemailer';
 import prisma from '../lib/db.js';
 import { auditLog } from '../lib/audit.js';
+import type { ReadyChannelToggles } from '../lib/notifications.js';
 
 const updateSettingsSchema = z.object({
   siteName: z.string().min(1).optional(),
@@ -237,7 +238,8 @@ const advancedSettingsSchema = z.object({
   enableRateLimiting: z.boolean().optional(),
 });
 
-const notificationSettingsSchema = z.object({
+// Typed against the lib's toggle shape so a renamed toggle fails to compile here
+const notificationSettingsSchema: z.ZodType<Partial<ReadyChannelToggles>> = z.object({
   readyEmailEnabled: z.boolean().optional(),
   readySmsEnabled: z.boolean().optional(),
   readyPushEnabled: z.boolean().optional(),
@@ -437,10 +439,6 @@ export async function updateReviewSettings(req: Request, res: Response): Promise
 }
 
 // ============================================================
-// ADVANCED SETTINGS
-// ============================================================
-
-// ============================================================
 // NOTIFICATION SETTINGS
 // ============================================================
 
@@ -455,9 +453,16 @@ export async function updateNotificationSettings(req: Request, res: Response): P
     res.status(400).json({ success: false, error: parsed.error.errors });
     return;
   }
-  const data = await updateSettingsGroup('notificationSettings', parsed.data);
+  // Merge over the stored group: every field is optional, so a partial PUT
+  // must not silently reset the omitted toggles to their defaults
+  const existing = await getSettingsGroup('notificationSettings');
+  const data = await updateSettingsGroup('notificationSettings', { ...existing, ...parsed.data });
   res.json({ success: true, data });
 }
+
+// ============================================================
+// ADVANCED SETTINGS
+// ============================================================
 
 export async function getAdvancedSettings(_req: Request, res: Response): Promise<void> {
   const data = await getSettingsGroup('advancedSettings');
