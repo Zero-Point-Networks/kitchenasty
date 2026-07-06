@@ -167,6 +167,60 @@ async function updateSettingsGroup(field: SettingsField, data: Record<string, an
 }
 
 // ============================================================
+// SETTINGS GROUP HANDLER FACTORY
+// ============================================================
+
+interface SettingsGroupOptions {
+  /** Secrets masked in every response; a masked value submitted on PUT keeps the stored one. */
+  maskedFields?: string[];
+  /** PUT merges over the stored group instead of replacing it. */
+  mergeOnUpdate?: boolean;
+}
+
+type SettingsGroupHandler = (req: Request, res: Response) => Promise<void>;
+
+function createSettingsGroupHandlers<T extends object>(
+  field: SettingsField,
+  schema: z.ZodType<T>,
+  options: SettingsGroupOptions = {},
+): { get: SettingsGroupHandler; update: SettingsGroupHandler } {
+  const { maskedFields = [], mergeOnUpdate = false } = options;
+
+  const withMaskedSecrets = (data: Record<string, any>): Record<string, any> => {
+    if (maskedFields.length === 0) return data;
+    const masked = { ...data };
+    for (const key of maskedFields) masked[key] = maskSecret(masked[key]);
+    return masked;
+  };
+
+  return {
+    get: async (_req: Request, res: Response): Promise<void> => {
+      const data = await getSettingsGroup(field);
+      res.json({ success: true, data: withMaskedSecrets(data) });
+    },
+    update: async (req: Request, res: Response): Promise<void> => {
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ success: false, error: parsed.error.errors });
+        return;
+      }
+
+      let toWrite: Record<string, any> = { ...parsed.data };
+      if (maskedFields.length > 0 || mergeOnUpdate) {
+        const existing = await getSettingsGroup(field);
+        for (const key of maskedFields) {
+          toWrite[key] = preserveIfMasked(toWrite[key], existing[key]);
+        }
+        if (mergeOnUpdate) toWrite = { ...existing, ...toWrite };
+      }
+
+      const data = await updateSettingsGroup(field, toWrite);
+      res.json({ success: true, data: withMaskedSecrets(data) });
+    },
+  };
+}
+
+// ============================================================
 // ZOD SCHEMAS FOR SETTINGS GROUPS
 // ============================================================
 
@@ -246,96 +300,39 @@ const notificationSettingsSchema: z.ZodType<Partial<ReadyChannelToggles>> = z.ob
 });
 
 // ============================================================
-// GENERAL SETTINGS
+// SETTINGS GROUP HANDLERS (factory-generated)
 // ============================================================
 
-export async function getGeneralSettings(_req: Request, res: Response): Promise<void> {
-  const data = await getSettingsGroup('generalSettings');
-  res.json({ success: true, data });
-}
+export const { get: getGeneralSettings, update: updateGeneralSettings } =
+  createSettingsGroupHandlers('generalSettings', generalSettingsSchema);
 
-export async function updateGeneralSettings(req: Request, res: Response): Promise<void> {
-  const parsed = generalSettingsSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.errors });
-    return;
-  }
-  const data = await updateSettingsGroup('generalSettings', parsed.data);
-  res.json({ success: true, data });
-}
+export const { get: getOrderSettings, update: updateOrderSettings } =
+  createSettingsGroupHandlers('orderSettings', orderSettingsSchema);
 
-// ============================================================
-// ORDER SETTINGS
-// ============================================================
+export const { get: getReservationSettings, update: updateReservationSettings } =
+  createSettingsGroupHandlers('reservationSettings', reservationSettingsSchema);
 
-export async function getOrderSettings(_req: Request, res: Response): Promise<void> {
-  const data = await getSettingsGroup('orderSettings');
-  res.json({ success: true, data });
-}
+export const { get: getMailSettings, update: updateMailSettings } =
+  createSettingsGroupHandlers('mailSettings', mailSettingsSchema, { maskedFields: ['smtpPass'] });
 
-export async function updateOrderSettings(req: Request, res: Response): Promise<void> {
-  const parsed = orderSettingsSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.errors });
-    return;
-  }
-  const data = await updateSettingsGroup('orderSettings', parsed.data);
-  res.json({ success: true, data });
-}
-
-// ============================================================
-// RESERVATION SETTINGS
-// ============================================================
-
-export async function getReservationSettings(_req: Request, res: Response): Promise<void> {
-  const data = await getSettingsGroup('reservationSettings');
-  res.json({ success: true, data });
-}
-
-export async function updateReservationSettings(req: Request, res: Response): Promise<void> {
-  const parsed = reservationSettingsSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.errors });
-    return;
-  }
-  const data = await updateSettingsGroup('reservationSettings', parsed.data);
-  res.json({ success: true, data });
-}
-
-// ============================================================
-// MAIL SETTINGS
-// ============================================================
-
-export async function getMailSettings(_req: Request, res: Response): Promise<void> {
-  const data = await getSettingsGroup('mailSettings');
-  res.json({
-    success: true,
-    data: {
-      ...data,
-      smtpPass: maskSecret(data.smtpPass),
-    },
+export const { get: getPaymentSettings, update: updatePaymentSettings } =
+  createSettingsGroupHandlers('paymentSettings', paymentSettingsSchema, {
+    maskedFields: ['stripeSecretKey', 'stripeWebhookSecret', 'paypalClientSecret'],
   });
-}
 
-export async function updateMailSettings(req: Request, res: Response): Promise<void> {
-  const parsed = mailSettingsSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.errors });
-    return;
-  }
+export const { get: getReviewSettings, update: updateReviewSettings } =
+  createSettingsGroupHandlers('reviewSettings', reviewSettingsSchema);
 
-  const existing = await getSettingsGroup('mailSettings');
-  const mergedData = {
-    ...parsed.data,
-    smtpPass: preserveIfMasked(parsed.data.smtpPass, existing.smtpPass),
-  };
+// Merge-on-update: a partial PUT must not reset the omitted ready-channel toggles
+export const { get: getNotificationSettings, update: updateNotificationSettings } =
+  createSettingsGroupHandlers('notificationSettings', notificationSettingsSchema, { mergeOnUpdate: true });
 
-  const data = await updateSettingsGroup('mailSettings', mergedData);
-  res.json({
-    success: true,
-    data: { ...data, smtpPass: maskSecret(data.smtpPass) },
-  });
-}
+export const { get: getAdvancedSettings, update: updateAdvancedSettings } =
+  createSettingsGroupHandlers('advancedSettings', advancedSettingsSchema);
+
+// ============================================================
+// TEST EMAIL
+// ============================================================
 
 export async function sendTestEmail(req: Request, res: Response): Promise<void> {
   const { to } = req.body;
@@ -373,108 +370,4 @@ export async function sendTestEmail(req: Request, res: Response): Promise<void> 
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message || 'Failed to send test email' });
   }
-}
-
-// ============================================================
-// PAYMENT SETTINGS
-// ============================================================
-
-export async function getPaymentSettings(_req: Request, res: Response): Promise<void> {
-  const data = await getSettingsGroup('paymentSettings');
-  res.json({
-    success: true,
-    data: {
-      ...data,
-      stripeSecretKey: maskSecret(data.stripeSecretKey),
-      stripeWebhookSecret: maskSecret(data.stripeWebhookSecret),
-      paypalClientSecret: maskSecret(data.paypalClientSecret),
-    },
-  });
-}
-
-export async function updatePaymentSettings(req: Request, res: Response): Promise<void> {
-  const parsed = paymentSettingsSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.errors });
-    return;
-  }
-
-  const existing = await getSettingsGroup('paymentSettings');
-  const mergedData = {
-    ...parsed.data,
-    stripeSecretKey: preserveIfMasked(parsed.data.stripeSecretKey, existing.stripeSecretKey),
-    stripeWebhookSecret: preserveIfMasked(parsed.data.stripeWebhookSecret, existing.stripeWebhookSecret),
-    paypalClientSecret: preserveIfMasked(parsed.data.paypalClientSecret, existing.paypalClientSecret),
-  };
-
-  const data = await updateSettingsGroup('paymentSettings', mergedData);
-  res.json({
-    success: true,
-    data: {
-      ...data,
-      stripeSecretKey: maskSecret(data.stripeSecretKey),
-      stripeWebhookSecret: maskSecret(data.stripeWebhookSecret),
-      paypalClientSecret: maskSecret(data.paypalClientSecret),
-    },
-  });
-}
-
-// ============================================================
-// REVIEW SETTINGS
-// ============================================================
-
-export async function getReviewSettings(_req: Request, res: Response): Promise<void> {
-  const data = await getSettingsGroup('reviewSettings');
-  res.json({ success: true, data });
-}
-
-export async function updateReviewSettings(req: Request, res: Response): Promise<void> {
-  const parsed = reviewSettingsSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.errors });
-    return;
-  }
-  const data = await updateSettingsGroup('reviewSettings', parsed.data);
-  res.json({ success: true, data });
-}
-
-// ============================================================
-// NOTIFICATION SETTINGS
-// ============================================================
-
-export async function getNotificationSettings(_req: Request, res: Response): Promise<void> {
-  const data = await getSettingsGroup('notificationSettings');
-  res.json({ success: true, data });
-}
-
-export async function updateNotificationSettings(req: Request, res: Response): Promise<void> {
-  const parsed = notificationSettingsSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.errors });
-    return;
-  }
-  // Merge over the stored group: every field is optional, so a partial PUT
-  // must not silently reset the omitted toggles to their defaults
-  const existing = await getSettingsGroup('notificationSettings');
-  const data = await updateSettingsGroup('notificationSettings', { ...existing, ...parsed.data });
-  res.json({ success: true, data });
-}
-
-// ============================================================
-// ADVANCED SETTINGS
-// ============================================================
-
-export async function getAdvancedSettings(_req: Request, res: Response): Promise<void> {
-  const data = await getSettingsGroup('advancedSettings');
-  res.json({ success: true, data });
-}
-
-export async function updateAdvancedSettings(req: Request, res: Response): Promise<void> {
-  const parsed = advancedSettingsSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ success: false, error: parsed.error.errors });
-    return;
-  }
-  const data = await updateSettingsGroup('advancedSettings', parsed.data);
-  res.json({ success: true, data });
 }

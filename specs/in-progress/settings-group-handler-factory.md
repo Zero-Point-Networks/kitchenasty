@@ -69,17 +69,19 @@ This is a **pure refactor**: the Red phase writes *characterization tests* again
 
 ## Implementation Order
 
-### Phase 1: Characterization tests
+### Phase 1: Characterization tests ✅
 <!-- packages: server -->
 
-- [ ] **T1.1** Extend `settings.test.ts` with characterization coverage: plain-group round-trip (review), masked-group GET masking + preserve-if-masked + new-value round-trip (mail, payment), replace semantics for plain groups, role gating for a SUPER_ADMIN-only group `[server]` `[~90 LOC]`
+- [x] **T1.1** Extend `settings.test.ts` with characterization coverage: plain-group round-trip (review), masked-group GET masking + preserve-if-masked + new-value round-trip (mail, payment), replace semantics for plain groups, role gating for a SUPER_ADMIN-only group `[server]` `[~90 LOC]`
 
-### Phase 2: Factory & migration
+### Phase 2: Factory & migration ✅
 <!-- depends: Characterization tests | packages: server -->
 
-- [ ] **T2.1** Add `createSettingsGroupHandlers(field, schema, options?)` with `maskedFields` + `mergeOnUpdate` support `[server]` `[~55 LOC]` — depends: T1.1
-- [ ] **T2.2** Migrate all eight groups to factory calls, deleting the sixteen hand-written handlers; keep exported names; `settings.routes.ts` unchanged `[server]` `[~120 LOC removed]` — depends: T2.1
-- [ ] **T2.3** Full server suite green; type-check clean; confirm masked-secret round-trip unchanged for mail/payment `[server]` — depends: T2.2
+- [x] **T2.1** Add `createSettingsGroupHandlers(field, schema, options?)` with `maskedFields` + `mergeOnUpdate` support `[server]` `[~55 LOC]` — depends: T1.1
+- [x] **T2.2** Migrate all eight groups to factory calls, deleting the sixteen hand-written handlers; keep exported names; `settings.routes.ts` unchanged `[server]` `[~120 LOC removed]` — depends: T2.1
+- [x] **T2.3** Full server suite green; type-check clean; confirm masked-secret round-trip unchanged for mail/payment `[server]` — depends: T2.2
+
+> **Session notes**: Phase 1 — 12 characterization tests added to `settings.test.ts` (review replace semantics + Zod-array 400 envelope; mail masking/preserve/fresh/omitted-secret-drops; payment 3-secret masking + mixed preserve/fresh PUT; MANAGER 403 for mail & payment); test-auditor's gaps (error envelope, payment gating, omitted-secret) all covered; `vi.resetAllMocks()` used in new describes. Phase 2 — `createSettingsGroupHandlers<T extends object>(field, schema, { maskedFields?, mergeOnUpdate? })` sits between the generic helpers and the schemas; 16 handlers replaced by 8 destructured `export const` calls (file 480→373 lines); `sendTestEmail` untouched; `settings.routes.ts` unchanged. 399 server tests green, tsc clean.
 
 ## Testing Strategy
 
