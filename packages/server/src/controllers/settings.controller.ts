@@ -170,19 +170,22 @@ async function updateSettingsGroup(field: SettingsField, data: Record<string, an
 // SETTINGS GROUP HANDLER FACTORY
 // ============================================================
 
-interface SettingsGroupOptions {
+interface SettingsGroupOptions<T> {
   /** Secrets masked in every response; a masked value submitted on PUT keeps the stored one. */
-  maskedFields?: string[];
+  maskedFields?: (keyof T & string)[];
   /** PUT merges over the stored group instead of replacing it. */
   mergeOnUpdate?: boolean;
 }
 
 type SettingsGroupHandler = (req: Request, res: Response) => Promise<void>;
 
+// Data flows through as Record<string, any> to match the untyped legacy
+// getSettingsGroup/updateSettingsGroup seam; maskedFields is keyed to the
+// schema type so a misspelt secret field fails to compile.
 function createSettingsGroupHandlers<T extends object>(
   field: SettingsField,
   schema: z.ZodType<T>,
-  options: SettingsGroupOptions = {},
+  options: SettingsGroupOptions<T> = {},
 ): { get: SettingsGroupHandler; update: SettingsGroupHandler } {
   const { maskedFields = [], mergeOnUpdate = false } = options;
 
@@ -211,6 +214,8 @@ function createSettingsGroupHandlers<T extends object>(
         for (const key of maskedFields) {
           toWrite[key] = preserveIfMasked(toWrite[key], existing[key]);
         }
+        // Merge after secret preservation: toWrite already carries resolved
+        // masked values, so a group combining both options stays correct
         if (mergeOnUpdate) toWrite = { ...existing, ...toWrite };
       }
 
@@ -367,7 +372,8 @@ export async function sendTestEmail(req: Request, res: Response): Promise<void> 
     });
 
     res.json({ success: true, message: 'Test email sent successfully' });
-  } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Failed to send test email' });
+  } catch (err: unknown) {
+    const message = err instanceof Error && err.message ? err.message : 'Failed to send test email';
+    res.status(500).json({ success: false, error: message });
   }
 }

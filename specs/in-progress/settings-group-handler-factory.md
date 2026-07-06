@@ -81,7 +81,7 @@ This is a **pure refactor**: the Red phase writes *characterization tests* again
 - [x] **T2.2** Migrate all eight groups to factory calls, deleting the sixteen hand-written handlers; keep exported names; `settings.routes.ts` unchanged `[server]` `[~120 LOC removed]` — depends: T2.1
 - [x] **T2.3** Full server suite green; type-check clean; confirm masked-secret round-trip unchanged for mail/payment `[server]` — depends: T2.2
 
-> **Session notes**: Phase 1 — 12 characterization tests added to `settings.test.ts` (review replace semantics + Zod-array 400 envelope; mail masking/preserve/fresh/omitted-secret-drops; payment 3-secret masking + mixed preserve/fresh PUT; MANAGER 403 for mail & payment); test-auditor's gaps (error envelope, payment gating, omitted-secret) all covered; `vi.resetAllMocks()` used in new describes. Phase 2 — `createSettingsGroupHandlers<T extends object>(field, schema, { maskedFields?, mergeOnUpdate? })` sits between the generic helpers and the schemas; 16 handlers replaced by 8 destructured `export const` calls (file 480→373 lines); `sendTestEmail` untouched; `settings.routes.ts` unchanged. 399 server tests green, tsc clean.
+> **Session notes**: Phase 1 — 13 characterization tests added to `settings.test.ts` (review replace semantics + Zod-array 400 envelope; mail masking/preserve/fresh/omitted-secret-drops; payment 3-secret masking + mixed preserve/fresh PUT; MANAGER 403 for mail & payment); test-auditor's gaps (error envelope, payment gating, omitted-secret) all covered; `vi.resetAllMocks()` used in new describes. Phase 2 — `createSettingsGroupHandlers<T extends object>(field, schema, { maskedFields?, mergeOnUpdate? })` sits between the generic helpers and the schemas; 16 handlers replaced by 8 destructured `export const` calls (file 480→373 lines); `sendTestEmail` untouched; `settings.routes.ts` unchanged. 399 server tests green, tsc clean.
 
 ## Testing Strategy
 
@@ -119,4 +119,4 @@ All tests must pass against the **current** implementation before the factory la
 
 ## Documentation Impact
 
-- [ ] None expected — internal refactor, no API change. Confirm with `docs-reviewer`; note "No documentation changes required" in this spec if it agrees.
+- [x] None — internal refactor, no API change. `docs-reviewer` confirmed (2026-07-06): all settings docs describe the user-facing contract only, which is unchanged. **No documentation changes required.**
