@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### QR / Dine-in Ordering
+- Admins can now **View QR** for an existing table code without rotating it; **Regenerate** stays available inside the QR modal with the printed-code invalidation warning
+- Diners now see a persistent **Ordering for {table}** banner after scanning a table QR, and the table binding survives a page refresh until they leave the table or place the order
 - Diners can scan a per-table QR code to open the menu already bound to their table and order without staff involvement, as a new **dine-in** order type
 - At checkout, dine-in orders can be paid online or **at the counter**, and can be placed anonymously (no account or contact details required)
 - Admins can generate and print a QR code for each table from **Locations → Tables** (regenerating a code warns that printed copies are invalidated)

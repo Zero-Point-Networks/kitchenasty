@@ -1,6 +1,6 @@
 # QR Ordering UX Polish
 
-## Status: In Progress
+## Status: Complete
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
