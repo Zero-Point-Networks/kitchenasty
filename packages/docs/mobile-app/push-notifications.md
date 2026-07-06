@@ -150,9 +150,11 @@ KitchenAsty sends these notifications:
 |-------------|-------------------|------|
 | ✅ CONFIRMED | Order Confirmed | Your order #KA-XXX has been confirmed |
 | 🍳 PREPARING | Being Prepared | Your order #KA-XXX is being prepared |
-| ✅ READY | Ready! | Your order #KA-XXX is ready for pickup |
+| ✅ READY | Ready! | Your order is ready for collection (includes the table label for dine-in, e.g. "— Table 4") |
 | 🚚 OUT_FOR_DELIVERY | On Its Way | Your order #KA-XXX is out for delivery |
 | 📦 DELIVERED | Delivered | Your order #KA-XXX has been delivered. Enjoy! |
+
+READY push notifications can be turned off by an admin via **Settings → Notifications** (`readyPushEnabled`); other transitions always push.
 
 ## 🔧 Troubleshooting
 

@@ -89,7 +89,7 @@ KitchenAsty enables restaurants, cafes, and takeaways to accept online orders fo
 ### Settings & Configuration
 
 - Centralized admin settings dashboard with clickable card grid
-- 7 settings groups: General, Orders, Reservations, Mail, Payments, Reviews, Advanced
+- 8 settings groups: General, Orders, Reservations, Mail, Payments, Reviews, Notifications, Advanced
 - DB-first config resolution for email, Stripe, and PayPal with env var fallback
 - Secret masking for sensitive fields (API keys, passwords) in the UI and API
 - Role-based settings access (MANAGER vs SUPER_ADMIN)

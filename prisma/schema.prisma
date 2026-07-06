@@ -605,6 +605,7 @@ model SiteSettings {
   paymentSettings     Json?  // { stripeEnabled, stripePublishableKey, stripeSecretKey, stripeWebhookSecret, paypalEnabled, paypalClientId, paypalClientSecret, paypalSandbox, cashEnabled }
   reviewSettings      Json?  // { enabled, requireOrder, autoApprove, minimumRating }
   advancedSettings    Json?  // { maintenanceMode, maintenanceMessage, enableRateLimiting }
+  notificationSettings Json? // { readyEmailEnabled, readySmsEnabled, readyPushEnabled }
 
   updatedAt       DateTime @updatedAt
   createdAt       DateTime @default(now())

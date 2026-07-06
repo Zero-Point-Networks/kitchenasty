@@ -103,6 +103,16 @@ Review moderation configuration:
 | `autoApprove` | 🤖 Auto-approve new reviews without moderation |
 | `minimumRating` | ⭐ Minimum allowed rating (1-5) |
 
+### 🔔 Notifications
+
+Channels for the [order-ready fan-out](/features/order-notifications):
+
+| Field | Description |
+|-------|-------------|
+| `readyEmailEnabled` | 📧 Email the ready-for-collection message (default on) |
+| `readySmsEnabled` | 📱 SMS via Twilio — per-message cost (default off) |
+| `readyPushEnabled` | 🔔 Push to mobile-app customers (default on) |
+
 ### 🔧 Advanced
 
 System-level settings (Super Admin only):
@@ -121,6 +131,7 @@ System-level settings (Super Admin only):
 | 📦 Orders | Yes | Yes |
 | 🪑 Reservations | Yes | Yes |
 | ⭐ Reviews | Yes | Yes |
+| 🔔 Notifications | Yes | Yes |
 | 📧 Mail | No | Yes |
 | 💳 Payment Gateways | No | Yes |
 | 🔧 Advanced | No | Yes |

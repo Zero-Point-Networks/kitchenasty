@@ -57,3 +57,13 @@ TWILIO_FROM_NUMBER=+1234567890
 ```
 
 SMS uses the same template variables as email.
+
+## 🔔 Order-Ready Notifications
+
+The [ready-for-collection fan-out](/features/order-notifications) reuses this configuration:
+
+- **Email** works out of the box once SMTP is configured — enabled by default.
+- **SMS** additionally requires the Twilio variables above **and** turning on `readySmsEnabled` under **Settings → Notifications** (off by default because each message costs money).
+- **Push** needs no configuration — Expo push tokens are registered by the mobile app — and is enabled by default.
+
+Channel toggles live at `PUT /api/settings/notifications` (`readyEmailEnabled`, `readySmsEnabled`, `readyPushEnabled`).

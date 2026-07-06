@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Order-Ready Pickup Notifications
+- Staff marking pickup or dine-in orders **READY** now sends a dedicated ready-for-collection notification by enabled channels: email, SMS, and mobile push
+- New **Settings → Notifications** page lets managers choose ready-notification channels, with email and push enabled by default and SMS opt-in
+- Ready notifications include table or room labels for dine-in orders and avoid duplicate messages on repeated READY updates
+
 #### QR / Dine-in Ordering
 - Diners can scan a per-table QR code to open the menu already bound to their table and order without staff involvement, as a new **dine-in** order type
 - At checkout, dine-in orders can be paid online or **at the counter**, and can be placed anonymously (no account or contact details required)

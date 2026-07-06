@@ -22,8 +22,32 @@ vi.mock('../../lib/db.js', () => {
   return { default: mockPrisma, prisma: mockPrisma };
 });
 
+vi.mock('../../lib/email.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/email.js')>();
+  return { ...actual, sendEmail: vi.fn().mockResolvedValue(undefined) };
+});
+
+vi.mock('../../lib/sms.js', () => ({
+  sendSMS: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../lib/socket.js', () => ({
+  emitNewOrder: vi.fn(),
+  emitOrderStatusUpdate: vi.fn(),
+  sendExpoPush: vi.fn().mockResolvedValue(undefined),
+}));
+
 import prisma from '../../lib/db.js';
+import { sendEmail } from '../../lib/email.js';
+import { sendSMS } from '../../lib/sms.js';
+import { emitOrderStatusUpdate, sendExpoPush } from '../../lib/socket.js';
+import { appEvents } from '../../lib/events.js';
+
 const mockedPrisma = vi.mocked(prisma);
+const mockedSendEmail = vi.mocked(sendEmail);
+const mockedSendSMS = vi.mocked(sendSMS);
+const mockedEmitStatus = vi.mocked(emitOrderStatusUpdate);
+const mockedSendExpoPush = vi.mocked(sendExpoPush);
 
 const app = createApp();
 
@@ -309,6 +333,187 @@ describe('Order API - Integration Tests', () => {
         .send({ status: 'CONFIRMED' });
 
       expect(res.status).toBe(404);
+    });
+  });
+
+  // ============================================================
+  // READY FAN-OUT (order-ready notifications)
+  // ============================================================
+  describe('PATCH /api/orders/:id/status - READY fan-out', () => {
+    const readyPickupOrder = {
+      ...sampleOrder,
+      status: 'READY',
+      orderType: 'PICKUP',
+      guestEmail: 'guest@test.com',
+      guestPhone: '+61400000000',
+      customer: null,
+      table: null,
+    };
+
+    function patchStatus(status: string) {
+      return request(app)
+        .patch('/api/orders/order-1/status')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({ status });
+    }
+
+    // notifyOrderReady is fire-and-forget; let its promise chain settle
+    const flushAsync = () => new Promise((resolve) => setImmediate(resolve));
+
+    beforeEach(() => {
+      mockedPrisma.order.findUnique.mockResolvedValue({ ...sampleOrder, customer: null, guestEmail: 'guest@test.com' } as any);
+      mockedPrisma.order.update.mockResolvedValue(readyPickupOrder as any);
+      mockedPrisma.automationRule.findMany.mockResolvedValue([]);
+      mockedPrisma.siteSettings.findUnique.mockResolvedValue({ siteName: 'KitchenAsty', notificationSettings: null } as any);
+    });
+
+    it('sends exactly one email — the dedicated ready template — for READY on a pickup order', async () => {
+      const res = await patchStatus('READY');
+      expect(res.status).toBe(200);
+      await flushAsync();
+
+      expect(mockedSendEmail).toHaveBeenCalledTimes(1);
+      const arg = mockedSendEmail.mock.calls[0][0];
+      expect(arg.to).toBe('guest@test.com');
+      expect(arg.subject).toContain('ready for collection');
+    });
+
+    it('suppresses the generic push for READY on a collectable order', async () => {
+      await patchStatus('READY');
+      await flushAsync();
+
+      expect(mockedEmitStatus).toHaveBeenCalledTimes(1);
+      expect(mockedEmitStatus.mock.calls[0][1]).toEqual({ suppressPush: true });
+    });
+
+    it('sends an SMS with the table label when readySmsEnabled and a phone is present', async () => {
+      mockedPrisma.siteSettings.findUnique.mockResolvedValue({
+        siteName: 'KitchenAsty',
+        notificationSettings: { readySmsEnabled: true },
+      } as any);
+      mockedPrisma.order.update.mockResolvedValue({
+        ...readyPickupOrder,
+        orderType: 'DINE_IN',
+        table: { name: 'Table 4' },
+      } as any);
+
+      await patchStatus('READY');
+      await flushAsync();
+
+      expect(mockedSendSMS).toHaveBeenCalledTimes(1);
+      const [to, body] = mockedSendSMS.mock.calls[0];
+      expect(to).toBe('+61400000000');
+      expect(body).toContain('KA-ABC-123');
+      expect(body).toContain('Table 4');
+    });
+
+    it('pushes the ready message to app customers via the fan-out', async () => {
+      mockedPrisma.order.update.mockResolvedValue({
+        ...readyPickupOrder,
+        guestEmail: null,
+        guestPhone: null,
+        customer: { email: 'cust@test.com', phone: null, expoPushToken: 'ExponentPushToken[abc]' },
+      } as any);
+
+      await patchStatus('READY');
+      await flushAsync();
+
+      expect(mockedSendExpoPush).toHaveBeenCalledTimes(1);
+      const [token, , body] = mockedSendExpoPush.mock.calls[0];
+      expect(token).toBe('ExponentPushToken[abc]');
+      expect(body.toLowerCase()).toContain('ready');
+    });
+
+    it('does not SMS by default even when a phone is present', async () => {
+      await patchStatus('READY');
+      await flushAsync();
+      expect(mockedSendSMS).not.toHaveBeenCalled();
+    });
+
+    it('keeps the generic email and push for READY on a DELIVERY order', async () => {
+      mockedPrisma.order.update.mockResolvedValue({
+        ...readyPickupOrder,
+        orderType: 'DELIVERY',
+      } as any);
+
+      await patchStatus('READY');
+      await flushAsync();
+
+      expect(mockedSendEmail).toHaveBeenCalledTimes(1);
+      expect(mockedSendEmail.mock.calls[0][0].subject).toBe('Order #KA-ABC-123 - READY');
+      expect(mockedSendExpoPush).not.toHaveBeenCalled();
+      expect(mockedEmitStatus.mock.calls[0][1]).toEqual({ suppressPush: false });
+    });
+
+    it('fires nothing when the status is unchanged (READY -> READY)', async () => {
+      mockedPrisma.order.findUnique.mockResolvedValue({
+        ...sampleOrder,
+        status: 'READY',
+        orderType: 'PICKUP',
+        customer: null,
+        guestEmail: 'guest@test.com',
+      } as any);
+
+      const res = await patchStatus('READY');
+      expect(res.status).toBe(200);
+      await flushAsync();
+
+      expect(mockedSendEmail).not.toHaveBeenCalled();
+      expect(mockedSendSMS).not.toHaveBeenCalled();
+      expect(mockedSendExpoPush).not.toHaveBeenCalled();
+      expect(mockedEmitStatus).not.toHaveBeenCalled();
+      expect(mockedPrisma.order.update).not.toHaveBeenCalled();
+    });
+
+    it('does not expose customer contact details in the status-update response', async () => {
+      mockedPrisma.order.update.mockResolvedValue({
+        ...readyPickupOrder,
+        customer: { email: 'cust@test.com', phone: '+61411111111', expoPushToken: 'ExponentPushToken[abc]' },
+        table: { name: 'Table 4' },
+      } as any);
+
+      const res = await patchStatus('READY');
+      expect(res.status).toBe(200);
+      expect(res.body.data.customer).toBeUndefined();
+      expect(res.body.data.table).toBeUndefined();
+      await flushAsync();
+    });
+
+    it('does not expose customer contact details in the automation status-change event', async () => {
+      const emitSpy = vi.spyOn(appEvents, 'emit');
+      mockedPrisma.order.update.mockResolvedValue({
+        ...readyPickupOrder,
+        customer: { email: 'cust@test.com', phone: '+61411111111', expoPushToken: 'ExponentPushToken[abc]' },
+        table: { name: 'Table 4' },
+      } as any);
+
+      const res = await patchStatus('READY');
+      expect(res.status).toBe(200);
+
+      const statusChangedCall = emitSpy.mock.calls.find(([event]) => event === 'order.statusChanged');
+      expect(statusChangedCall).toBeDefined();
+      expect(statusChangedCall?.[1]).toEqual({
+        order: expect.not.objectContaining({
+          customer: expect.anything(),
+          table: expect.anything(),
+        }),
+        previousStatus: 'PENDING',
+      });
+    });
+
+    it('keeps the generic email for non-READY transitions and fires no fan-out', async () => {
+      mockedPrisma.order.update.mockResolvedValue({
+        ...readyPickupOrder,
+        status: 'PREPARING',
+      } as any);
+
+      await patchStatus('PREPARING');
+      await flushAsync();
+
+      expect(mockedSendEmail).toHaveBeenCalledTimes(1);
+      expect(mockedSendEmail.mock.calls[0][0].subject).toContain('PREPARING');
+      expect(mockedSendSMS).not.toHaveBeenCalled();
+      expect(mockedSendExpoPush).not.toHaveBeenCalled();
     });
   });
 
