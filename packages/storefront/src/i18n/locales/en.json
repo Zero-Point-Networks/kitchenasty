@@ -159,7 +159,19 @@
     "placeOrder": "Place Order",
     "processing": "Processing...",
     "guestCheckout": "Guest Checkout",
-    "guestEmail": "Email for order updates"
+    "guestEmail": "Email for order updates",
+    "currentlyUnavailable": "Currently Unavailable",
+    "specialInstructions": "Any special instructions...",
+    "enterCode": "Enter code",
+    "loyaltyPoints": "Loyalty Points",
+    "pointsBalance": "You have {{count}} points (100 = $1.00)",
+    "pointsToRedeem": "Points to redeem",
+    "contactInformation": "Contact Information",
+    "loginForFaster": "Log in for faster checkout",
+    "fullName": "Full name *",
+    "emailAddress": "Email address *",
+    "phoneOptional": "Phone (optional)",
+    "loyaltyDiscount": "Loyalty Discount"
   },
   "tableLanding": {
     "loading": "Opening the menu for your table…",

@@ -156,7 +156,19 @@
     "placeOrder": "Passer la Commande",
     "processing": "Traitement en cours...",
     "guestCheckout": "Commander en tant qu'Invité",
-    "guestEmail": "E-mail pour le suivi de commande"
+    "guestEmail": "E-mail pour le suivi de commande",
+    "currentlyUnavailable": "Actuellement indisponible",
+    "specialInstructions": "Des instructions particulières...",
+    "enterCode": "Saisir le code",
+    "loyaltyPoints": "Points de Fidélité",
+    "pointsBalance": "Vous avez {{count}} points (100 = $1.00)",
+    "pointsToRedeem": "Points à utiliser",
+    "contactInformation": "Coordonnées",
+    "loginForFaster": "Connectez-vous pour un paiement plus rapide",
+    "fullName": "Nom complet *",
+    "emailAddress": "Adresse e-mail *",
+    "phoneOptional": "Téléphone (facultatif)",
+    "loyaltyDiscount": "Remise de Fidélité"
   },
   "orderConfirmation": {
     "title": "Commande Passée !",

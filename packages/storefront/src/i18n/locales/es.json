@@ -156,7 +156,19 @@
     "placeOrder": "Realizar Pedido",
     "processing": "Procesando...",
     "guestCheckout": "Pedido como Invitado",
-    "guestEmail": "Correo para actualizaciones del pedido"
+    "guestEmail": "Correo para actualizaciones del pedido",
+    "currentlyUnavailable": "No disponible actualmente",
+    "specialInstructions": "¿Alguna instrucción especial...?",
+    "enterCode": "Introduce el código",
+    "loyaltyPoints": "Puntos de Fidelidad",
+    "pointsBalance": "Tienes {{count}} puntos (100 = $1.00)",
+    "pointsToRedeem": "Puntos a canjear",
+    "contactInformation": "Información de Contacto",
+    "loginForFaster": "Inicia sesión para un pago más rápido",
+    "fullName": "Nombre completo *",
+    "emailAddress": "Correo electrónico *",
+    "phoneOptional": "Teléfono (opcional)",
+    "loyaltyDiscount": "Descuento de Fidelidad"
   },
   "orderConfirmation": {
     "title": "¡Pedido Realizado!",
