@@ -54,23 +54,26 @@ Preconditions: dev environment running (server + admin), SMTP pointed at Mailhog
 - `packages/server/src/__tests__/unit/notify-order-ready.test.ts` **(NEW)**: 17 tests — channel/contact/toggle matrix, table labels, best-effort resilience
 - `packages/server/src/__tests__/unit/socket.test.ts` **(NEW)**: 5 tests — real `suppressPush` guard and `sendExpoPush` token validation
 - `packages/server/src/__tests__/unit/email.test.ts`: 5 `orderReadyEmail` tests
-- `packages/server/src/__tests__/integration/order.test.ts`: 9-test READY fan-out matrix incl. READY→READY idempotency and response sanitization
+- `packages/server/src/__tests__/integration/order.test.ts`: 10-test READY fan-out matrix incl. READY→READY idempotency, automation payload sanitization, and response sanitization
+- `packages/server/src/__tests__/integration/settings.test.ts` **(NEW)**: 5 tests — notification settings auth, RBAC, validation, and partial-update merge behavior
 
 ### Documentation
 - `packages/docs/features/order-notifications.md` **(NEW)** + VitePress sidebar entry (`.vitepress/config.ts`)
 - `packages/docs/configuration/email-sms.md`, `packages/docs/features/ordering.md`, `packages/docs/features/settings.md`, `packages/docs/api/settings.md`, `packages/docs/api/orders.md`, `packages/docs/mobile-app/push-notifications.md`, `README.md`: updated for the new group and READY behaviour
 
 ### Specs
-- `specs/in-progress/order-ready-notifications.md`: all tasks checked, phase summaries added
+- `specs/completed/order-ready-notifications.md`: all tasks checked, phase summaries added, final audit complete
 - `specs/draft/settings-group-handler-factory.md` **(NEW)**: follow-up refactor spec for the 8×-duplicated settings-group handler pattern
 
 ## Test Results
 
-- Tests run: 380 (server: 70 unit + 310 integration)
-- Passed: 380
+- Tests run: 386 (server: 61 unit + 325 integration)
+- Passed: 386
 - Failed: 0
 - Type checks clean (`tsc` server + admin); docs build clean. ESLint could not run — config broken repo-wide, pre-existing, tracked by `specs/draft/repair-eslint-config.md`.
 
-## Remaining Work
+## Finalization
 
-All spec phases are complete. Next step: `/wf:finalize order-ready-notifications` (changelog + close-out). Review found no blockers; the settings-handler duplication was deliberately deferred into its own draft spec rather than widened here.
+Final audit found and fixed two medium issues: unchanged status PATCHes no longer write the order or audit noise, and automation `order.statusChanged` payloads no longer expose notification-only customer contact fields or table data. The user-facing changelog was updated, and the spec has been moved to `specs/completed/order-ready-notifications.md`.
+
+The settings-handler duplication remains captured in `specs/draft/settings-group-handler-factory.md`, keeping that refactor separate from this user-visible notification feature.

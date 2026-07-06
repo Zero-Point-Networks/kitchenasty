@@ -41,6 +41,7 @@ import prisma from '../../lib/db.js';
 import { sendEmail } from '../../lib/email.js';
 import { sendSMS } from '../../lib/sms.js';
 import { emitOrderStatusUpdate, sendExpoPush } from '../../lib/socket.js';
+import { appEvents } from '../../lib/events.js';
 
 const mockedPrisma = vi.mocked(prisma);
 const mockedSendEmail = vi.mocked(sendEmail);
@@ -461,6 +462,7 @@ describe('Order API - Integration Tests', () => {
       expect(mockedSendSMS).not.toHaveBeenCalled();
       expect(mockedSendExpoPush).not.toHaveBeenCalled();
       expect(mockedEmitStatus).not.toHaveBeenCalled();
+      expect(mockedPrisma.order.update).not.toHaveBeenCalled();
     });
 
     it('does not expose customer contact details in the status-update response', async () => {
@@ -475,6 +477,28 @@ describe('Order API - Integration Tests', () => {
       expect(res.body.data.customer).toBeUndefined();
       expect(res.body.data.table).toBeUndefined();
       await flushAsync();
+    });
+
+    it('does not expose customer contact details in the automation status-change event', async () => {
+      const emitSpy = vi.spyOn(appEvents, 'emit');
+      mockedPrisma.order.update.mockResolvedValue({
+        ...readyPickupOrder,
+        customer: { email: 'cust@test.com', phone: '+61411111111', expoPushToken: 'ExponentPushToken[abc]' },
+        table: { name: 'Table 4' },
+      } as any);
+
+      const res = await patchStatus('READY');
+      expect(res.status).toBe(200);
+
+      const statusChangedCall = emitSpy.mock.calls.find(([event]) => event === 'order.statusChanged');
+      expect(statusChangedCall).toBeDefined();
+      expect(statusChangedCall?.[1]).toEqual({
+        order: expect.not.objectContaining({
+          customer: expect.anything(),
+          table: expect.anything(),
+        }),
+        previousStatus: 'PENDING',
+      });
     });
 
     it('keeps the generic email for non-READY transitions and fires no fan-out', async () => {

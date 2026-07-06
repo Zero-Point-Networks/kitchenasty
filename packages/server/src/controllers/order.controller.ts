@@ -509,10 +509,23 @@ export async function updateOrderStatus(req: Request<{ id: string }>, res: Respo
 
   const order = await prisma.order.findUnique({
     where: { id },
-    include: { customer: { select: { email: true } } },
+    include: {
+      items: { include: { options: true } },
+      customer: { select: { email: true, phone: true, expoPushToken: true } },
+      table: { select: { name: true } },
+    },
   });
   if (!order) {
     res.status(404).json({ success: false, error: 'Order not found' });
+    return;
+  }
+
+  // Repeated identical PATCHes (double-click, client retry) must not re-fire
+  // side effects or update timestamps/audit records.
+  const statusChanged = order.status !== status;
+  if (!statusChanged) {
+    const { customer, table, ...orderResponse } = order;
+    res.json({ success: true, data: orderResponse });
     return;
   }
 
@@ -528,46 +541,41 @@ export async function updateOrderStatus(req: Request<{ id: string }>, res: Respo
 
   auditLog(req, { action: 'update', entity: 'Order', entityId: id, details: { status, previousStatus: order.status } });
 
-  // Repeated identical PATCHes (double-click, client retry) must not re-fire
-  // notifications — SMS in particular is billed per message.
-  const statusChanged = order.status !== status;
-
   // READY on a collectable order gets a dedicated fan-out (email/SMS/push);
   // the generic email and push are suppressed for it so nothing double-fires.
-  const readyForCollection = statusChanged && status === 'READY' && ['PICKUP', 'DINE_IN'].includes(updated.orderType);
+  const readyForCollection = status === 'READY' && ['PICKUP', 'DINE_IN'].includes(updated.orderType);
+  const { customer, table, ...orderResponse } = updated;
 
-  if (statusChanged) {
-    emitOrderStatusUpdate(
-      {
-        id: updated.id,
-        orderNumber: updated.orderNumber,
-        status: updated.status,
-        orderType: updated.orderType,
-        customerId: updated.customerId,
-      },
-      { suppressPush: readyForCollection },
-    );
+  emitOrderStatusUpdate(
+    {
+      id: updated.id,
+      orderNumber: updated.orderNumber,
+      status: updated.status,
+      orderType: updated.orderType,
+      customerId: updated.customerId,
+    },
+    { suppressPush: readyForCollection },
+  );
 
-    if (readyForCollection) {
-      notifyOrderReady(updated).catch(() => {});
-    } else {
-      // Send status update email
-      const recipientEmail = resolveContactEmail(order);
-      if (recipientEmail) {
-        const emailContent = orderStatusEmail({ orderNumber: order.orderNumber, status });
-        sendEmail({ to: recipientEmail, ...emailContent }).catch(() => {});
-      }
+  if (readyForCollection) {
+    notifyOrderReady(updated).catch(() => {});
+  } else {
+    // Send status update email
+    const recipientEmail = resolveContactEmail(order);
+    if (recipientEmail) {
+      const emailContent = orderStatusEmail({ orderNumber: order.orderNumber, status });
+      sendEmail({ to: recipientEmail, ...emailContent }).catch(() => {});
     }
-
-    // Emit event for automation rules
-    try {
-      const { appEvents } = await import('../lib/events.js');
-      appEvents.emit('order.statusChanged', { order: updated, previousStatus: order.status });
-    } catch {}
   }
+
+  // Emit event for automation rules with the public order shape, not the
+  // notification-only contact/token includes used for fan-out.
+  try {
+    const { appEvents } = await import('../lib/events.js');
+    appEvents.emit('order.statusChanged', { order: orderResponse, previousStatus: order.status });
+  } catch {}
 
   // customer/table were included for the notification fan-out only — keep the
   // response payload to its pre-existing shape (no contact details or tokens)
-  const { customer, table, ...orderResponse } = updated;
   res.json({ success: true, data: orderResponse });
 }

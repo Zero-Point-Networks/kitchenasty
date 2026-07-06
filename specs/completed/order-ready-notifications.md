@@ -1,6 +1,6 @@
 # Order-Ready Pickup Notifications
 
-## Status: In Progress
+## Status: Complete
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
@@ -54,7 +54,7 @@ After the status update, when `status === 'READY'` and `orderType` ∈ `{PICKUP,
 
 ### 3. Settings — channel toggles
 
-Add a `notificationSettings` group with `readyEmailEnabled`, `readySmsEnabled`, `readyPushEnabled` booleans, following the existing settings-group pattern end-to-end: new `notificationSettings Json?` column on `SiteSettings` (**Prisma migration required** — each group is its own column), `SettingsField` union member + Zod schema + get/update handlers in `settings.controller.ts`, and `GET/PUT /settings/notifications` routes (`SUPER_ADMIN`, `MANAGER` — same as order settings). Surface it in a new `packages/admin/src/pages/SettingsNotifications.tsx` page registered in the settings nav (`packages/admin/src/pages/Settings.tsx`), consistent with the existing per-group settings pages (`SettingsOrder.tsx`, `SettingsMail.tsx`, …).
+Add a `notificationSettings` group with `readyEmailEnabled`, `readySmsEnabled`, `readyPushEnabled` booleans, following the existing settings-group pattern end-to-end: new `notificationSettings Json?` column on `SiteSettings` (**Prisma migration required** — each group is its own column), `SettingsField` union member + Zod schema + get/update handlers in `settings.controller.ts`, and `GET/PUT /api/settings/notifications` routes (`SUPER_ADMIN`, `MANAGER` — same as order settings). Surface it in a new `packages/admin/src/pages/SettingsNotifications.tsx` page registered in the settings nav (`packages/admin/src/pages/Settings.tsx`), consistent with the existing per-group settings pages (`SettingsOrder.tsx`, `SettingsMail.tsx`, …).
 
 Defaults: **email on, push on, SMS off**. SMS has per-message cost so it's opt-in; push defaults on because app customers already receive a READY push today via `emitOrderStatusUpdate` — defaulting it off would regress that. Turning `readyPushEnabled` off suppresses the READY push entirely (that's the point of the toggle).
 
@@ -70,9 +70,9 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 <!-- packages: server -->
 
 - [x] **T1.1** Add `orderReadyEmail(...)` template to `packages/server/src/lib/email.ts` `[server]` `[~30 LOC]`
-- [x] **T1.2** Add `notificationSettings` group: `Json?` column on `SiteSettings` + Prisma migration, `SettingsField` member, Zod schema, get/update handlers, `/settings/notifications` routes `[server]` `[~40 LOC]`
+- [x] **T1.2** Add `notificationSettings` group: `Json?` column on `SiteSettings` + Prisma migration, `SettingsField` member, Zod schema, get/update handlers, `/api/settings/notifications` routes `[server]` `[~40 LOC]`
 
-> **Session notes**: `orderReadyEmail({ orderNumber, tableName? })` in `email.ts` (after `orderStatusEmail`); table label renders as "Collect at: <label>" only when truthy — template contains no other "Table" text (tests assert its absence). `notificationSettings Json?` column on `SiteSettings` + handwritten migration `20260705134500_add_notification_settings` (no local DB; SQL matches generator output style). Controller follows the generic group pattern (`SettingsField` union + Zod + get/update handlers); routes `GET/PUT /settings/notifications` at MANAGER+ like order settings. Tests: 5 new in `unit/email.test.ts` (39 unit total, green). Defaults (email/push on, SMS off) are NOT stored in the DB — Phase 2's helper owns default resolution.
+> **Session notes**: `orderReadyEmail({ orderNumber, tableName? })` in `email.ts` (after `orderStatusEmail`); table label renders as "Collect at: <label>" only when truthy — template contains no other "Table" text (tests assert its absence). `notificationSettings Json?` column on `SiteSettings` + handwritten migration `20260705134500_add_notification_settings` (no local DB; SQL matches generator output style). Controller follows the generic group pattern (`SettingsField` union + Zod + get/update handlers); routes `GET/PUT /api/settings/notifications` at MANAGER+ like order settings. Tests: 5 new in `unit/email.test.ts` (39 unit total, green). Defaults (email/push on, SMS off) are NOT stored in the DB — Phase 2's helper owns default resolution.
 
 ### Phase 2: Notification fan-out ✅
 <!-- depends: Settings & template | packages: server -->
@@ -80,7 +80,7 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 - [x] **T2.1** Add `notifyOrderReady(order)` helper (email + SMS + push, best-effort, settings-gated) `[server]` `[~70 LOC]` — depends: T1.1, T1.2
 - [x] **T2.2** Call `notifyOrderReady` from `updateOrderStatus` on `READY` for `PICKUP`/`DINE_IN`; skip the generic status email for that case and pass `suppressPush` to `emitOrderStatusUpdate` (no double email, no double push) `[server]` `[~20 LOC]` — depends: T2.1
 
-> **Session notes**: `lib/notifications.ts` exports `notifyOrderReady(order)`, `OrderReadyInfo`, and `READY_NOTIFICATION_DEFAULTS` (email/push on, SMS off) — defaults merge over the stored `notificationSettings` JSON, and a failed settings read falls back to defaults. `socket.ts` now exports `sendExpoPush(token, title, body, data?)` (used by both the generic push and the ready push) and `emitOrderStatusUpdate` takes `{ suppressPush }`. `updateOrderStatus` computes `readyForCollection` (READY + PICKUP/DINE_IN), suppresses generic push + email for that case, and the update query now includes `customer {email, phone, expoPushToken}` and `table {name}` (route is staff-only). Tests: 14 in `unit/notify-order-ready.test.ts` mocking db/email/sms/socket; 53 unit + 310 integration green.
+> **Session notes**: `lib/notifications.ts` exports `notifyOrderReady(order)`, `OrderReadyInfo`, and `READY_NOTIFICATION_DEFAULTS` (email/push on, SMS off) — defaults merge over the stored `notificationSettings` JSON, and a failed settings read falls back to defaults. `socket.ts` now exports `sendExpoPush(token, title, body, data?)` (used by both the generic push and the ready push) and `emitOrderStatusUpdate` takes `{ suppressPush }`. `updateOrderStatus` computes `readyForCollection` (READY + PICKUP/DINE_IN), suppresses generic push + email for that case, and the update query now includes `customer {email, phone, expoPushToken}` and `table {name}` (route is staff-only). Tests: 17 in `unit/notify-order-ready.test.ts` mocking db/email/sms/socket; 61 unit + 325 integration green.
 
 ### Phase 3: Admin & tests ✅
 <!-- depends: Notification fan-out | packages: admin, server -->
@@ -88,9 +88,17 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 - [x] **T3.1** New `SettingsNotifications.tsx` page (channel toggles) + register in `Settings.tsx` nav `[admin]` `[~50 LOC]` — depends: T1.2
 - [x] **T3.2** Integration tests: READY fires the right channels per settings; non-READY unaffected `[server]` `[~60 LOC]` — depends: T2.2
 
-> **Review pass** (refactorer + code-reviewer + test-auditor): fixed READY→READY idempotency (`statusChanged` gates all side effects — repeated PATCHes no longer re-bill SMS), partial `PUT /settings/notifications` now merges over stored toggles instead of resetting them, status-update response strips `customer`/`table` (no `expoPushToken` exposure; restores pre-feature shape), extracted `resolveContactEmail`, typed `notificationSettingsSchema` against `ReadyChannelToggles`, fixed section banners in `settings.controller.ts`. Test gaps closed: `unit/socket.test.ts` (NEW) exercises the real `suppressPush` guard; added phone-precedence, site-name, push-table-label, READY→READY, and response-sanitization tests. Settings-handler duplication got its own draft spec: `specs/draft/settings-group-handler-factory.md`. 380 server tests green.
+> **Review pass** (refactorer + code-reviewer + test-auditor): fixed READY→READY idempotency (`statusChanged` gates all notification side effects — repeated PATCHes no longer re-bill SMS), partial `PUT /api/settings/notifications` now merges over stored toggles instead of resetting them, status-update response strips `customer`/`table` (no `expoPushToken` exposure; restores pre-feature shape), extracted `resolveContactEmail`, typed `notificationSettingsSchema` against `ReadyChannelToggles`, fixed section banners in `settings.controller.ts`. Test gaps closed: `unit/socket.test.ts` (NEW) exercises the real `suppressPush` guard; added phone-precedence, site-name, push-table-label, READY→READY, and response-sanitization tests. Settings-handler duplication got its own draft spec: `specs/draft/settings-group-handler-factory.md`. 386 server tests green.
 >
-> **Session notes**: `SettingsNotifications.tsx` mirrors `SettingsReviews.tsx` (fetch/save `/api/settings/notifications`, three checkboxes, client defaults mirror `READY_NOTIFICATION_DEFAULTS`); card added to `Settings.tsx` grid (MANAGER+) and route in `main.tsx`. Integration matrix (7 tests) added to `order.test.ts` under "READY fan-out" — required mocking email/sms/socket modules at file top (`emitNewOrder`/`emitOrderStatusUpdate` now mocked for the whole file) and a `setImmediate` flush because `notifyOrderReady` is fire-and-forget. 370 server tests green; admin `tsc -b` clean; docs build clean. eslint is broken repo-wide (pre-existing, tracked by `specs/draft/repair-eslint-config.md`) so lint could not run.
+> **Session notes**: `SettingsNotifications.tsx` mirrors `SettingsReviews.tsx` (fetch/save `/api/settings/notifications`, three checkboxes, client defaults mirror `READY_NOTIFICATION_DEFAULTS`); card added to `Settings.tsx` grid (MANAGER+) and route in `main.tsx`. Integration matrix added to `order.test.ts` under "READY fan-out" — required mocking email/sms/socket modules at file top (`emitNewOrder`/`emitOrderStatusUpdate` now mocked for the whole file) and a `setImmediate` flush because `notifyOrderReady` is fire-and-forget. 386 server tests green; admin `tsc -b` clean; docs build clean. eslint is broken repo-wide (pre-existing, tracked by `specs/draft/repair-eslint-config.md`) so lint could not run.
+
+### Phase 4: Finalization Fixes
+<!-- packages: server -->
+
+- [x] **T4.1** Avoid writing an unchanged status back to the database or audit log on repeated status PATCHes `[server]` `[~15 LOC]`
+- [x] **T4.2** Ensure automation `order.statusChanged` payloads do not expose notification-only `customer` contact fields or `table` data `[server]` `[~10 LOC]`
+
+> **Session notes**: Final audit found repeated same-status PATCHes still wrote `updatedAt`/audit noise and automation webhooks could receive notification-only `customer.phone`/`expoPushToken` and `table` data. `updateOrderStatus` now returns the sanitized existing order before `prisma.order.update` when the status is unchanged, and `order.statusChanged` emits the same sanitized order shape returned by the API. Added coverage in `order.test.ts` plus `settings.test.ts` for `/api/settings/notifications` auth, validation, and partial-merge behavior. Targeted tests: 39 integration tests green.
 
 ## Testing Strategy
 
@@ -99,6 +107,7 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 | Test File | What It Tests |
 |-----------|--------------|
 | `packages/server/src/__tests__/unit/notify-order-ready.test.ts` (**NEW**) | Channel selection by available contacts + settings; message includes table label when present; channels are best-effort |
+| `packages/server/src/__tests__/unit/socket.test.ts` (**NEW**) | Generic push suppression and Expo token validation |
 
 ### Integration / E2E Tests
 
@@ -107,6 +116,11 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 - Non-READY transitions still use the generic status email and do **not** trigger the ready fan-out.
 - READY on a `DELIVERY` order does not fire the pickup-ready message (generic email/push unchanged).
 - READY on a collectable order sends exactly one email and at most one push (generic paths suppressed).
+- Repeated READY PATCHes are side-effect free and do not write the order again.
+- Automation status-change events receive the sanitized order payload, without notification-only contact fields.
+
+`packages/server/src/__tests__/integration/settings.test.ts`:
+- `GET/PUT /api/settings/notifications` authentication, role checks, schema validation, and partial-merge behavior.
 
 ## Risks and Mitigations
 
@@ -134,7 +148,7 @@ If the order has a `tableId` (from `qr-ordering.md`), include the table/room lab
 | `packages/server/src/lib/socket.ts` | `suppressPush` option on `emitOrderStatusUpdate`; expose the Expo send path for reuse |
 | `packages/server/src/controllers/order.controller.ts` | Call `notifyOrderReady` on READY for PICKUP/DINE_IN; suppress generic email + push for that case |
 | `packages/server/src/controllers/settings.controller.ts` | `notificationSettings` `SettingsField` member, Zod schema, get/update handlers |
-| `packages/server/src/routes/settings.routes.ts` | `GET/PUT /settings/notifications` routes |
+| `packages/server/src/routes/settings.routes.ts` | `GET/PUT /api/settings/notifications` routes |
 | `prisma/schema.prisma` | `notificationSettings Json?` column on `SiteSettings` + migration |
 | `packages/admin/src/pages/SettingsNotifications.tsx` | **NEW** — notification channel toggles |
 | `packages/admin/src/pages/Settings.tsx` | Register the Notifications settings page in the nav |
