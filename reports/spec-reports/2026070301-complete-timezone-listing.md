@@ -37,7 +37,7 @@ Admins can now choose from the browser-supported IANA timezone list in General S
 ### Documentation
 
 - `packages/docs/features/settings.md`: Documents that the timezone field uses the browser-supported IANA picker ordered by region.
-- `specs/in-progress/complete-timezone-listing.md`: Moves the spec into progress, records completed Phase 1 tasks, and notes local verification results.
+- `specs/completed/complete-timezone-listing.md`: Records completed Phase 1 tasks, final audit status, and local verification results.
 
 ## Test Results
 
@@ -51,6 +51,6 @@ Admins can now choose from the browser-supported IANA timezone list in General S
 - Playwright browser verification is blocked locally: the Chromium executable is missing, and the Playwright installer refuses `ubuntu26.04-x64`. Run the E2E spec in a supported environment with Playwright browsers installed.
 - Repository lint verification is blocked by missing ESLint configuration. This matches the existing `specs/draft/repair-eslint-config.md` work and was not changed in this spec.
 
-## Remaining Work
+## Finalization
 
-All implementation phases in this spec are checked complete. The next workflow step is `wf:finalize complete-timezone-listing` for the final audit and closeout.
+Final audit found no code, test, or documentation gaps. The spec has been moved to `specs/completed/complete-timezone-listing.md`.
