@@ -1,6 +1,6 @@
 # Complete Timezone Listing
 
-## Status: In Progress
+## Status: Completed
 
 ## Objective
 
@@ -74,8 +74,6 @@ Update `packages/docs/features/settings.md` to make the General Settings timezon
 > **Session notes**: Implemented the timezone option builder in `packages/admin/src/pages/SettingsGeneral.tsx`, including deterministic region/name sorting, `UTC`, browser-supported IANA zones, and preservation of unknown stored values.
 > Added `e2e/admin/settings-general.spec.ts` with browser-derived expected options for completeness, ordering, and unknown-value preservation; updated `packages/docs/features/settings.md`.
 > Verification: `npm run build -w packages/admin` passed. `npx playwright test e2e/admin/settings-general.spec.ts --project=admin` is blocked locally by missing Playwright Chromium, and `npx playwright install chromium` reports unsupported `ubuntu26.04-x64`. `npm run lint` is blocked by the repo's missing ESLint config.
-
-Task T1.4 has no code dependency and can run in parallel with the admin implementation.
 
 ## Testing Strategy
 
