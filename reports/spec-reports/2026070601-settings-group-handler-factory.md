@@ -34,7 +34,7 @@ Nothing should look different — that's the point. To spot-check:
 - `packages/server/src/__tests__/integration/settings.test.ts`: 13 new characterization tests (review replace semantics + Zod error envelope; mail masking, preserve-if-masked, fresh-secret, omitted-secret-drops, validation; payment three-secret masking, mixed preserve/fresh PUT, MANAGER 403, validation). Written and green **before** the factory landed, per the refactor discipline.
 
 ### Specs
-- `specs/in-progress/settings-group-handler-factory.md`: all tasks checked, session notes, docs no-op recorded.
+- `specs/completed/settings-group-handler-factory.md`: all tasks checked, session notes, docs no-op recorded.
 
 ## Test Results
 
