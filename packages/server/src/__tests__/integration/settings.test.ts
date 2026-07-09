@@ -249,7 +249,7 @@ describe('Settings API - masked group (payment) characterization', () => {
 
 describe('Settings API - Notification Settings', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('GET /api/settings/notifications', () => {

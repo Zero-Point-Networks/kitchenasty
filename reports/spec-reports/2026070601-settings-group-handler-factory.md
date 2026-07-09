@@ -1,6 +1,7 @@
 # Spec Report — Settings-Group Handler Factory
 
 Date: 06 July 2026 | Session: interactive
+Updated: 06 July 2026 | /wf:finalize deep audit: no bugs found; one mock-hygiene consistency fix in `settings.test.ts` (notification describe now uses `vi.resetAllMocks()`); 399 tests green
 
 ## What Was Delivered
 

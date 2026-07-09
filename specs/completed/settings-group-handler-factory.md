@@ -1,6 +1,6 @@
 # Settings-Group Handler Factory
 
-## Status: In Progress
+## Status: Complete
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
@@ -82,6 +82,12 @@ This is a **pure refactor**: the Red phase writes *characterization tests* again
 - [x] **T2.3** Full server suite green; type-check clean; confirm masked-secret round-trip unchanged for mail/payment `[server]` — depends: T2.2
 
 > **Session notes**: Phase 1 — 13 characterization tests added to `settings.test.ts` (review replace semantics + Zod-array 400 envelope; mail masking/preserve/fresh/omitted-secret-drops; payment 3-secret masking + mixed preserve/fresh PUT; MANAGER 403 for mail & payment); test-auditor's gaps (error envelope, payment gating, omitted-secret) all covered; `vi.resetAllMocks()` used in new describes. Phase 2 — `createSettingsGroupHandlers<T extends object>(field, schema, { maskedFields?, mergeOnUpdate? })` sits between the generic helpers and the schemas; 16 handlers replaced by 8 destructured `export const` calls (file 480→373 lines); `sendTestEmail` untouched; `settings.routes.ts` unchanged. 399 server tests green, tsc clean.
+
+### Phase 3: Finalization Fixes ✅
+
+- [x] Fix: align the pre-existing notification describe to `vi.resetAllMocks()` (was `clearAllMocks`) so mock implementations can't leak across describe blocks `[server]`
+
+> **Session notes**: /wf:finalize deep audit (2026-07-06) read every implementation and test file end-to-end and found no bugs, gaps, or edge cases — only this one-line mock-hygiene consistency fix. 399 server tests green after.
 
 ## Testing Strategy
 
