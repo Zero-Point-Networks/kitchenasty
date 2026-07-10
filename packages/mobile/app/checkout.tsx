@@ -138,7 +138,7 @@ export default function CheckoutScreen() {
 
       {isBusy && (
         <View className="bg-amber-50 p-4 rounded-xl mb-4">
-          <Text className="text-amber-800 font-semibold">Currently Unavailable</Text>
+          <Text className="text-amber-800 font-semibold">{t('checkout.currentlyUnavailable')}</Text>
         </View>
       )}
 
@@ -201,7 +201,7 @@ export default function CheckoutScreen() {
       <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
         <TextInput
           label={t('checkout.orderNotes')}
-          placeholder="Any special instructions..."
+          placeholder={t('checkout.specialInstructions')}
           value={comment}
           onChangeText={setComment}
           multiline
@@ -215,7 +215,7 @@ export default function CheckoutScreen() {
         <View className="flex-row gap-2">
           <View className="flex-1">
             <TextInput
-              placeholder="Enter code"
+              placeholder={t('checkout.enterCode')}
               value={couponCode}
               onChangeText={setCouponCode}
               autoCapitalize="characters"
@@ -230,12 +230,10 @@ export default function CheckoutScreen() {
       {/* Loyalty */}
       {user && loyaltyBalance > 0 && (
         <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
-          <Text className="text-base font-semibold text-gray-900 mb-2">Loyalty Points</Text>
-          <Text className="text-sm text-gray-500 mb-3">
-            You have <Text className="font-bold text-primary-600">{loyaltyBalance}</Text> points (100 = $1.00)
-          </Text>
+          <Text className="text-base font-semibold text-gray-900 mb-2">{t('checkout.loyaltyPoints')}</Text>
+          <Text className="text-sm text-gray-500 mb-3">{t('checkout.pointsBalance', { count: loyaltyBalance })}</Text>
           <TextInput
-            placeholder="Points to redeem"
+            placeholder={t('checkout.pointsToRedeem')}
             value={loyaltyRedeem > 0 ? String(loyaltyRedeem) : ''}
             onChangeText={(v) => setLoyaltyRedeem(Math.max(0, parseInt(v) || 0))}
             keyboardType="numeric"
@@ -271,13 +269,13 @@ export default function CheckoutScreen() {
       {/* Guest Info */}
       {!user && (
         <View className="bg-white rounded-xl p-4 mb-4 border border-gray-100">
-          <Text className="text-base font-semibold text-gray-900 mb-3">Contact Information</Text>
+          <Text className="text-base font-semibold text-gray-900 mb-3">{t('checkout.contactInformation')}</Text>
           <Pressable onPress={() => router.push('/(auth)/login')} className="mb-3">
-            <Text className="text-primary-600 text-sm font-medium underline">{t('nav.login')} for faster checkout</Text>
+            <Text className="text-primary-600 text-sm font-medium underline">{t('checkout.loginForFaster')}</Text>
           </Pressable>
-          <TextInput placeholder="Full name *" value={guestName} onChangeText={setGuestName} />
-          <TextInput placeholder="Email address *" value={guestEmail} onChangeText={setGuestEmail} keyboardType="email-address" />
-          <TextInput placeholder="Phone (optional)" value={guestPhone} onChangeText={setGuestPhone} keyboardType="phone-pad" />
+          <TextInput placeholder={t('checkout.fullName')} value={guestName} onChangeText={setGuestName} />
+          <TextInput placeholder={t('checkout.emailAddress')} value={guestEmail} onChangeText={setGuestEmail} keyboardType="email-address" />
+          <TextInput placeholder={t('checkout.phoneOptional')} value={guestPhone} onChangeText={setGuestPhone} keyboardType="phone-pad" />
         </View>
       )}
 
@@ -303,7 +301,7 @@ export default function CheckoutScreen() {
             <SummaryRow label={t('checkout.deliveryFee')} value={formatCurrency(deliveryFee)} />
           )}
           {loyaltyDiscount > 0 && (
-            <SummaryRow label="Loyalty Discount" value={`-${formatCurrency(loyaltyDiscount)}`} green />
+            <SummaryRow label={t('checkout.loyaltyDiscount')} value={`-${formatCurrency(loyaltyDiscount)}`} green />
           )}
           <View className="flex-row justify-between mt-2 pt-2 border-t border-gray-100">
             <Text className="text-base font-bold">{t('checkout.total')}</Text>
@@ -314,7 +312,7 @@ export default function CheckoutScreen() {
 
       <View className="mb-8">
         <Button
-          title={isBusy ? 'Currently Unavailable' : `${t('checkout.placeOrder')} - ${formatCurrency(total)}`}
+          title={isBusy ? t('checkout.currentlyUnavailable') : `${t('checkout.placeOrder')} - ${formatCurrency(total)}`}
           onPress={handlePlaceOrder}
           loading={loading}
           disabled={isBusy}

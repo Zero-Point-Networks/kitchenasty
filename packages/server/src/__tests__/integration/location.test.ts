@@ -121,6 +121,51 @@ describe('Location API - Integration Tests', () => {
 
       expect(res.status).toBe(404);
     });
+
+    it('returns embedded tables in natural name order', async () => {
+      mockedPrisma.location.findUnique.mockResolvedValue({
+        ...sampleLocation,
+        operatingHours: [],
+        deliveryZones: [],
+        tables: [
+          { id: 'tbl-10', name: 'Table 10', capacity: 4, isActive: true },
+          { id: 'tbl-bob', name: 'Bob', capacity: 2, isActive: true },
+          { id: 'tbl-2', name: 'Table 2', capacity: 4, isActive: true },
+          { id: 'tbl-1', name: 'Table 1', capacity: 4, isActive: true },
+        ],
+      } as any);
+
+      const res = await request(app).get('/api/locations/loc-1');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.tables.map((t: { name: string }) => t.name)).toEqual([
+        'Bob',
+        'Table 1',
+        'Table 2',
+        'Table 10',
+      ]);
+    });
+
+    it('preserves the other included relations alongside the sorted tables', async () => {
+      // getLocation rebuilds the response as { ...location, tables: sorted },
+      // so guard against that spread ever narrowing the payload.
+      mockedPrisma.location.findUnique.mockResolvedValue({
+        ...sampleLocation,
+        operatingHours: [{ dayOfWeek: 1, openTime: '09:00', closeTime: '17:00' }],
+        deliveryZones: [{ id: 'dz-1', name: 'Downtown' }],
+        tables: [{ id: 'tbl-2', name: 'Table 2', capacity: 4, isActive: true }],
+        _count: { orders: 7, reservations: 3, menuItems: 12 },
+      } as any);
+
+      const res = await request(app).get('/api/locations/loc-1');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.name).toBe('Downtown Kitchen');
+      expect(res.body.data.operatingHours).toHaveLength(1);
+      expect(res.body.data.deliveryZones[0].name).toBe('Downtown');
+      expect(res.body.data._count).toEqual({ orders: 7, reservations: 3, menuItems: 12 });
+      expect(res.body.data.tables).toHaveLength(1);
+    });
   });
 
   // ============================================================

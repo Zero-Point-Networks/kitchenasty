@@ -147,6 +147,9 @@
     "paymentMethod": "Zahlungsart",
     "creditCard": "Kreditkarte (Stripe)",
     "cashOnDelivery": "Barzahlung bei Lieferung",
+    "payAtCounter": "An der Theke zahlen",
+    "dineInTitle": "Am Tisch",
+    "dineInSubtitle": "Bestellen Sie für Ihren Tisch – jetzt zahlen oder an der Theke.",
     "orderSummary": "Bestellübersicht",
     "subtotal": "Zwischensumme",
     "tax": "MwSt.",
@@ -156,7 +159,29 @@
     "placeOrder": "Bestellung Aufgeben",
     "processing": "Wird verarbeitet...",
     "guestCheckout": "Als Gast Bestellen",
-    "guestEmail": "E-Mail für Bestellupdates"
+    "guestEmail": "E-Mail für Bestellupdates",
+    "currentlyUnavailable": "Derzeit nicht verfügbar",
+    "specialInstructions": "Besondere Wünsche...",
+    "enterCode": "Code eingeben",
+    "loyaltyPoints": "Treuepunkte",
+    "pointsBalance": "Sie haben {{count}} Punkte (100 = $1.00)",
+    "pointsToRedeem": "Einzulösende Punkte",
+    "contactInformation": "Kontaktdaten",
+    "loginForFaster": "Anmelden für schnelleren Checkout",
+    "fullName": "Vollständiger Name *",
+    "emailAddress": "E-Mail-Adresse *",
+    "phoneOptional": "Telefon (optional)",
+    "loyaltyDiscount": "Treuerabatt"
+  },
+  "tableLanding": {
+    "loading": "Die Speisekarte für Ihren Tisch wird geöffnet…",
+    "invalidTitle": "Tisch nicht gefunden",
+    "invalidBody": "Dieser QR-Code ist ungültig oder der Tisch ist nicht mehr aktiv. Sie können trotzdem die Speisekarte ansehen.",
+    "browseMenu": "Speisekarte Ansehen"
+  },
+  "dineInBanner": {
+    "ordering": "Bestellung für",
+    "leave": "Tisch verlassen"
   },
   "orderConfirmation": {
     "title": "Bestellung Aufgegeben!",

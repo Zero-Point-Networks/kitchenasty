@@ -147,6 +147,9 @@
     "paymentMethod": "Mode de Paiement",
     "creditCard": "Carte Bancaire (Stripe)",
     "cashOnDelivery": "Paiement à la livraison",
+    "payAtCounter": "Payer au comptoir",
+    "dineInTitle": "Sur place",
+    "dineInSubtitle": "Commandez pour votre table — payez maintenant ou au comptoir.",
     "orderSummary": "Récapitulatif",
     "subtotal": "Sous-total",
     "tax": "TVA",
@@ -156,7 +159,29 @@
     "placeOrder": "Passer la Commande",
     "processing": "Traitement en cours...",
     "guestCheckout": "Commander en tant qu'Invité",
-    "guestEmail": "E-mail pour le suivi de commande"
+    "guestEmail": "E-mail pour le suivi de commande",
+    "currentlyUnavailable": "Actuellement indisponible",
+    "specialInstructions": "Des instructions particulières...",
+    "enterCode": "Saisir le code",
+    "loyaltyPoints": "Points de Fidélité",
+    "pointsBalance": "Vous avez {{count}} points (100 = $1.00)",
+    "pointsToRedeem": "Points à utiliser",
+    "contactInformation": "Coordonnées",
+    "loginForFaster": "Connectez-vous pour un paiement plus rapide",
+    "fullName": "Nom complet *",
+    "emailAddress": "Adresse e-mail *",
+    "phoneOptional": "Téléphone (facultatif)",
+    "loyaltyDiscount": "Remise de Fidélité"
+  },
+  "tableLanding": {
+    "loading": "Ouverture du menu pour votre table…",
+    "invalidTitle": "Table introuvable",
+    "invalidBody": "Ce code QR n'est pas valide ou la table n'est plus active. Vous pouvez tout de même consulter le menu.",
+    "browseMenu": "Voir le Menu"
+  },
+  "dineInBanner": {
+    "ordering": "Commande pour",
+    "leave": "Quitter la table"
   },
   "orderConfirmation": {
     "title": "Commande Passée !",

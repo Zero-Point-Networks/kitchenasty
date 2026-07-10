@@ -14,7 +14,6 @@ interface Table {
 
 interface QrModalState {
   table: Table;
-  tableName: string;
   url: string;
   dataUrl: string;
 }
@@ -100,7 +99,7 @@ export default function TableList() {
       );
       const { url } = res.data;
       const dataUrl = await QRCode.toDataURL(url, { width: 320, margin: 2 });
-      setQrModal({ table, tableName: table.name, url, dataUrl });
+      setQrModal({ table, url, dataUrl });
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to load QR code');
     }
@@ -119,7 +118,7 @@ export default function TableList() {
       const { qrToken, url } = res.data;
       const dataUrl = await QRCode.toDataURL(url, { width: 320, margin: 2 });
       setTables((prev) => prev.map((t) => (t.id === table.id ? { ...t, qrToken } : t)));
-      setQrModal({ table: { ...table, qrToken }, tableName: table.name, url, dataUrl });
+      setQrModal({ table: { ...table, qrToken }, url, dataUrl });
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Failed to generate QR code');
     }
@@ -130,7 +129,7 @@ export default function TableList() {
     if (!win) return;
     const esc = (s: string) =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const name = esc(modal.tableName);
+    const name = esc(modal.table.name);
     win.document.write(
       `<html><head><title>QR — ${name}</title></head>` +
       `<body style="text-align:center;font-family:sans-serif;padding:24px">` +
@@ -320,9 +319,9 @@ export default function TableList() {
       {qrModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setQrModal(null)}>
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-medium text-gray-900 mb-1">{qrModal.tableName}</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-1">{qrModal.table.name}</h3>
             <p className="text-sm text-gray-500 mb-4">Diners scan this to order from the table.</p>
-            <img src={qrModal.dataUrl} alt={`QR code for ${qrModal.tableName}`} className="mx-auto w-64 h-64" />
+            <img src={qrModal.dataUrl} alt={`QR code for ${qrModal.table.name}`} className="mx-auto w-64 h-64" />
             <p className="text-xs text-gray-400 break-all mt-3">{qrModal.url}</p>
             <div className="flex gap-3 justify-center mt-5">
               <button

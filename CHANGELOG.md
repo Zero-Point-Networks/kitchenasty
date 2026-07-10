@@ -16,10 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Order-Ready Pickup Notifications
+- Staff marking pickup or dine-in orders **READY** now sends a dedicated ready-for-collection notification by enabled channels: email, SMS, and mobile push
+- New **Settings → Notifications** page lets managers choose ready-notification channels, with email and push enabled by default and SMS opt-in
+- Ready notifications include table or room labels for dine-in orders and avoid duplicate messages on repeated READY updates
+
 #### QR / Dine-in Ordering
 - Diners can scan a per-table QR code to open the menu already bound to their table and order without staff involvement, as a new **dine-in** order type
 - At checkout, dine-in orders can be paid online or **at the counter**, and can be placed anonymously (no account or contact details required)
-- Admins can generate and print a QR code for each table from **Locations → Tables** (regenerating a code warns that printed copies are invalidated)
+- Admins can generate, view, and print a QR code for each table from **Locations → Tables** — viewing or reprinting an existing code never rotates it; **Regenerate** (inside the QR dialog) warns that printed copies are invalidated
+- After scanning, a persistent **"Ordering for {table}"** banner appears on every storefront page (with a **Leave table** action) and the table binding survives page refreshes
+- Dine-in screens (banner, table landing, checkout labels) are translated in all six storefront languages
 - Dine-in ordering is gated by a new **Dine-in** toggle in Order Settings
 - Staff can filter orders by dine-in and see a distinct dine-in badge in the order list and Kitchen Display
 - New documentation: "QR / Dine-in Ordering" feature and API reference pages
@@ -29,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Generated placeholder images for all 41 Coolgardie menu items, copied into `/uploads/coolgardie-menu/` by the venue seed until real venue photography is uploaded
 - The demo seed (`prisma/seed.ts`) is unchanged; the venue seed is additive and idempotent, intended for a fresh database
 - DB-gated integration test (`packages/server/src/__tests__/integration/seed-coolgardie.test.ts`) — runs when `DATABASE_URL` is set, skips otherwise
+
+### Fixed
+
+#### Table Ordering
+- Table lists now sort in natural order, so **Table 2** appears before **Table 10** instead of after **Table 1**. This applies to the admin **Locations → Tables** screen and the **Assign Table** dropdown on a reservation
 
 ## [0.3.0] - 2026-05-14
 

@@ -152,6 +152,35 @@ export function orderStatusEmail(order: {
   };
 }
 
+export function orderReadyEmail(order: {
+  orderNumber: string;
+  tableName?: string;
+}): { subject: string; html: string } {
+  const collectLine = order.tableName
+    ? `<p style="margin:8px 0 0;color:#6b7280">Collect at: <strong>${order.tableName}</strong></p>`
+    : '';
+
+  return {
+    subject: `Order #${order.orderNumber} is ready for collection`,
+    html: `
+      <div style="max-width:600px;margin:0 auto;font-family:sans-serif">
+        <div style="background:#f97316;color:white;padding:20px;text-align:center;border-radius:8px 8px 0 0">
+          <h1 style="margin:0;font-size:24px">KitchenAsty</h1>
+        </div>
+        <div style="padding:24px;background:white;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
+          <h2 style="margin:0 0 8px">Your order is ready for collection!</h2>
+          <p style="color:#6b7280;margin:0 0 16px">Order <strong>#${order.orderNumber}</strong></p>
+          <div style="background:#f3f4f6;padding:16px;border-radius:8px;margin-bottom:16px">
+            <p style="margin:0;font-size:18px;font-weight:bold">Ready for collection</p>
+            ${collectLine}
+          </div>
+          <p style="color:#6b7280;font-size:14px">Please collect your order at the counter.</p>
+        </div>
+      </div>
+    `,
+  };
+}
+
 export function staffInvitationEmail(invite: {
   email: string;
   role: string;

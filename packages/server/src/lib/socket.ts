@@ -43,23 +43,46 @@ export function getIO(): Server | null {
   return io;
 }
 
-export function emitOrderStatusUpdate(order: {
-  id: string;
-  orderNumber: string;
-  status: string;
-  orderType: string;
-  customerId?: string | null;
-}): void {
+export function emitOrderStatusUpdate(
+  order: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    orderType: string;
+    customerId?: string | null;
+  },
+  options?: { suppressPush?: boolean },
+): void {
   if (!io) return;
   // Notify the specific order room (customer tracking)
   io.to(`order:${order.id}`).emit('order:statusUpdate', order);
   // Notify the kitchen display
   io.to('kitchen').emit('order:statusUpdate', order);
 
-  // Send push notification to the customer
-  if (order.customerId) {
+  // Send push notification to the customer, unless the caller sends a
+  // dedicated notification for this transition (avoids double-push on READY)
+  if (order.customerId && !options?.suppressPush) {
     sendPushNotification(order.customerId, order.orderNumber, order.status).catch(() => {});
   }
+}
+
+export async function sendExpoPush(
+  token: string,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+): Promise<void> {
+  if (!Expo.isExpoPushToken(token)) return;
+
+  const message: ExpoPushMessage = {
+    to: token,
+    title,
+    body,
+    data,
+    sound: 'default',
+  };
+
+  await expo.sendPushNotificationsAsync([message]);
 }
 
 async function sendPushNotification(
@@ -88,15 +111,12 @@ async function sendPushNotification(
 
   const statusLabel = statusLabels[status] || status.toLowerCase();
 
-  const message: ExpoPushMessage = {
-    to: customer.expoPushToken,
-    title: `Order #${orderNumber}`,
-    body: `Your order is ${statusLabel}.`,
-    data: { orderId: customerId, status },
-    sound: 'default',
-  };
-
-  await expo.sendPushNotificationsAsync([message]);
+  await sendExpoPush(
+    customer.expoPushToken,
+    `Order #${orderNumber}`,
+    `Your order is ${statusLabel}.`,
+    { orderId: customerId, status },
+  );
 }
 
 export function emitNewOrder(order: {

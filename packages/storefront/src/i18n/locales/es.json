@@ -147,6 +147,9 @@
     "paymentMethod": "Método de Pago",
     "creditCard": "Tarjeta de Crédito (Stripe)",
     "cashOnDelivery": "Pago contra entrega",
+    "payAtCounter": "Pagar en el mostrador",
+    "dineInTitle": "En mesa",
+    "dineInSubtitle": "Pide para tu mesa: paga ahora o en el mostrador.",
     "orderSummary": "Resumen del Pedido",
     "subtotal": "Subtotal",
     "tax": "Impuesto",
@@ -156,7 +159,29 @@
     "placeOrder": "Realizar Pedido",
     "processing": "Procesando...",
     "guestCheckout": "Pedido como Invitado",
-    "guestEmail": "Correo para actualizaciones del pedido"
+    "guestEmail": "Correo para actualizaciones del pedido",
+    "currentlyUnavailable": "No disponible actualmente",
+    "specialInstructions": "¿Alguna instrucción especial...?",
+    "enterCode": "Introduce el código",
+    "loyaltyPoints": "Puntos de Fidelidad",
+    "pointsBalance": "Tienes {{count}} puntos (100 = $1.00)",
+    "pointsToRedeem": "Puntos a canjear",
+    "contactInformation": "Información de Contacto",
+    "loginForFaster": "Inicia sesión para un pago más rápido",
+    "fullName": "Nombre completo *",
+    "emailAddress": "Correo electrónico *",
+    "phoneOptional": "Teléfono (opcional)",
+    "loyaltyDiscount": "Descuento de Fidelidad"
+  },
+  "tableLanding": {
+    "loading": "Abriendo el menú para tu mesa…",
+    "invalidTitle": "Mesa no encontrada",
+    "invalidBody": "Este código QR no es válido o la mesa ya no está activa. Aún puedes ver el menú.",
+    "browseMenu": "Ver Menú"
+  },
+  "dineInBanner": {
+    "ordering": "Pidiendo para",
+    "leave": "Salir de la mesa"
   },
   "orderConfirmation": {
     "title": "¡Pedido Realizado!",

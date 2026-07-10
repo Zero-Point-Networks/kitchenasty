@@ -21,6 +21,8 @@ import {
   updateReviewSettings,
   getAdvancedSettings,
   updateAdvancedSettings,
+  getNotificationSettings,
+  updateNotificationSettings,
 } from '../controllers/settings.controller.js';
 
 const router = Router();
@@ -55,6 +57,10 @@ router.put('/payment', authenticate, requireRole('SUPER_ADMIN'), updatePaymentSe
 // Review — MANAGER+
 router.get('/review', authenticate, requireRole('SUPER_ADMIN', 'MANAGER'), getReviewSettings);
 router.put('/review', authenticate, requireRole('SUPER_ADMIN', 'MANAGER'), updateReviewSettings);
+
+// Notifications — MANAGER+
+router.get('/notifications', authenticate, requireRole('SUPER_ADMIN', 'MANAGER'), getNotificationSettings);
+router.put('/notifications', authenticate, requireRole('SUPER_ADMIN', 'MANAGER'), updateNotificationSettings);
 
 // Advanced — SUPER_ADMIN only
 router.get('/advanced', authenticate, requireRole('SUPER_ADMIN'), getAdvancedSettings);

@@ -140,6 +140,12 @@ Authorization: Bearer <staff-token>
 | `READY` | 🚚 `OUT_FOR_DELIVERY`, ✅ `DELIVERED`, 🏃 `PICKED_UP`, ❌ `CANCELLED` |
 | `OUT_FOR_DELIVERY` | ✅ `DELIVERED`, ❌ `CANCELLED` |
 
+**Behaviour notes:**
+
+- Status changes notify the customer. The `READY` transition on `PICKUP`/`DINE_IN` orders sends the dedicated multi-channel [ready-for-collection message](/features/order-notifications); every other transition sends the generic status email.
+- Repeating the same status (e.g. `READY` → `READY`) is a no-op for notifications — nothing re-fires, so billed SMS can't be sent twice.
+- The response contains the updated order and its items only; customer contact details and table info are never included.
+
 ## ⚠️ Error Cases
 
 | Scenario | Status | Error |
