@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/db.js';
 import { auditLog } from '../lib/audit.js';
+import { sortTablesByName } from '../lib/table-name-sort.js';
 
 // ============================================================
 // VALIDATION SCHEMAS
@@ -82,6 +83,8 @@ export async function getLocation(req: Request<{ id: string }>, res: Response): 
     include: {
       operatingHours: { orderBy: { dayOfWeek: 'asc' } },
       deliveryZones: { orderBy: { name: 'asc' } },
+      // sortTablesByName below is authoritative for tables; this orderBy only
+      // keeps the rows Prisma hands back stable.
       tables: { orderBy: { name: 'asc' } },
       _count: { select: { orders: true, reservations: true, menuItems: true } },
     },
@@ -92,7 +95,7 @@ export async function getLocation(req: Request<{ id: string }>, res: Response): 
     return;
   }
 
-  res.json({ success: true, data: location });
+  res.json({ success: true, data: { ...location, tables: sortTablesByName(location.tables) } });
 }
 
 export async function createLocation(req: Request, res: Response): Promise<void> {

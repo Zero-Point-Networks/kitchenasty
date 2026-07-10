@@ -63,6 +63,31 @@ describe('Table API - Integration Tests', () => {
       const res = await request(app).get('/api/locations/unknown/tables');
       expect(res.status).toBe(404);
     });
+
+    it('returns tables in natural name order regardless of the order Prisma returns them', async () => {
+      mockedPrisma.location.findUnique.mockResolvedValue(sampleLocation as any);
+      mockedPrisma.table.findMany.mockResolvedValue([
+        { ...sampleTable, id: 'tbl-10', name: 'Table 10', _count: { reservations: 0 } },
+        { ...sampleTable, id: 'tbl-bob', name: 'Bob', _count: { reservations: 0 } },
+        { ...sampleTable, id: 'tbl-2', name: 'Table 2', _count: { reservations: 0 } },
+        { ...sampleTable, id: 'tbl-1', name: 'Table 1', _count: { reservations: 0 } },
+      ] as any);
+
+      const res = await request(app).get('/api/locations/loc-1/tables');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.map((t: { name: string }) => t.name)).toEqual([
+        'Bob',
+        'Table 1',
+        'Table 2',
+        'Table 10',
+      ]);
+
+      // The in-memory sort is authoritative, but the query stays deterministic.
+      expect(mockedPrisma.table.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ orderBy: { name: 'asc' } })
+      );
+    });
   });
 
   // ============================================================

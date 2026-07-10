@@ -97,6 +97,9 @@ Root `npm test` runs unit then integration. E2E is Playwright (`playwright.confi
 - **Prisma**: The Prisma schema lives at the repo root (`prisma/schema.prisma`); `packages/server` points at it via `../../prisma/schema.prisma`. Run `prisma generate` (and `prisma migrate`) before building or testing the server. Seed via `npm run db:seed -w packages/server`.
 - **Integration tests need PostgreSQL**: server integration tests under `src/__tests__/integration/` exercise the real data layer and require a running/migrated PostgreSQL database (set `DATABASE_URL`). Unit tests do not.
 - **Mobile excluded from root pipeline**: the Expo/React Native `mobile` package is not part of the root `build`, `test`, or `lint` scripts and is built/tested/typechecked separately.
+- **`npm run lint` is broken**: no ESLint config is tracked anywhere in the repo (including `main`), `eslint` is not a declared dependency, and the script still passes `--ext`, removed in ESLint v9. The lint step cannot be run until `specs/draft/restore-eslint-flat-config.md` lands. Do not report "lint clean" — report that it could not run.
+- **E2E needs `NODE_ENV=test`**: `app.ts` only mounts the 100-request/15-minute rate limiter when `NODE_ENV !== 'test'`. Running more than ~4 admin E2E tests without it makes the login fixture receive 429s, and every auth-dependent test fails in a way that looks like an app bug. Run Playwright with `NODE_ENV=test DATABASE_URL=... JWT_SECRET=... npx playwright test`.
+- **E2E needs a database**: Playwright's `webServer` boots `dev:server`, which needs Postgres. `docker compose up -d postgres`, then `npm run db:deploy -w packages/server && npm run db:seed -w packages/server`. The seeded `admin@kitchenasty.com` / `admin123` account is what `e2e/admin/fixtures.ts` logs in with.
 
 ## Coding Standards Memory Files
 
