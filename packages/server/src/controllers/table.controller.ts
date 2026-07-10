@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/db.js';
 import { generateQrToken, tableQrUrl } from '../lib/qr.js';
+import { sortTablesByName } from '../lib/table-name-sort.js';
 
 const createTableSchema = z.object({
   name: z.string().min(1),
@@ -20,6 +21,8 @@ export async function listTables(req: Request<{ locationId: string }>, res: Resp
     return;
   }
 
+  // sortTablesByName is authoritative; the orderBy only keeps the rows Prisma
+  // hands back stable, so debugging the raw query isn't confusing.
   const tables = await prisma.table.findMany({
     where: { locationId },
     orderBy: { name: 'asc' },
@@ -28,7 +31,7 @@ export async function listTables(req: Request<{ locationId: string }>, res: Resp
     },
   });
 
-  res.json({ success: true, data: tables });
+  res.json({ success: true, data: sortTablesByName(tables) });
 }
 
 export async function getTable(req: Request<{ locationId: string; tableId: string }>, res: Response): Promise<void> {

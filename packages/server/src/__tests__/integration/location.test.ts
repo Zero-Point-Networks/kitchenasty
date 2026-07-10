@@ -121,6 +121,30 @@ describe('Location API - Integration Tests', () => {
 
       expect(res.status).toBe(404);
     });
+
+    it('returns embedded tables in natural name order', async () => {
+      mockedPrisma.location.findUnique.mockResolvedValue({
+        ...sampleLocation,
+        operatingHours: [],
+        deliveryZones: [],
+        tables: [
+          { id: 'tbl-10', name: 'Table 10', capacity: 4, isActive: true },
+          { id: 'tbl-bob', name: 'Bob', capacity: 2, isActive: true },
+          { id: 'tbl-2', name: 'Table 2', capacity: 4, isActive: true },
+          { id: 'tbl-1', name: 'Table 1', capacity: 4, isActive: true },
+        ],
+      } as any);
+
+      const res = await request(app).get('/api/locations/loc-1');
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.tables.map((t: { name: string }) => t.name)).toEqual([
+        'Bob',
+        'Table 1',
+        'Table 2',
+        'Table 10',
+      ]);
+    });
   });
 
   // ============================================================
