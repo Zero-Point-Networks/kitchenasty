@@ -159,7 +159,19 @@
     "placeOrder": "Bestellung Aufgeben",
     "processing": "Wird verarbeitet...",
     "guestCheckout": "Als Gast Bestellen",
-    "guestEmail": "E-Mail für Bestellupdates"
+    "guestEmail": "E-Mail für Bestellupdates",
+    "currentlyUnavailable": "Derzeit nicht verfügbar",
+    "specialInstructions": "Besondere Wünsche...",
+    "enterCode": "Code eingeben",
+    "loyaltyPoints": "Treuepunkte",
+    "pointsBalance": "Sie haben {{count}} Punkte (100 = $1.00)",
+    "pointsToRedeem": "Einzulösende Punkte",
+    "contactInformation": "Kontaktdaten",
+    "loginForFaster": "Anmelden für schnelleren Checkout",
+    "fullName": "Vollständiger Name *",
+    "emailAddress": "E-Mail-Adresse *",
+    "phoneOptional": "Telefon (optional)",
+    "loyaltyDiscount": "Treuerabatt"
   },
   "tableLanding": {
     "loading": "Die Speisekarte für Ihren Tisch wird geöffnet…",

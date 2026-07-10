@@ -159,7 +159,19 @@
     "placeOrder": "Fazer Pedido",
     "processing": "Processando...",
     "guestCheckout": "Pedir como Visitante",
-    "guestEmail": "E-mail para atualizações do pedido"
+    "guestEmail": "E-mail para atualizações do pedido",
+    "currentlyUnavailable": "Atualmente indisponível",
+    "specialInstructions": "Alguma instrução especial...",
+    "enterCode": "Insira o código",
+    "loyaltyPoints": "Pontos de Fidelidade",
+    "pointsBalance": "Você tem {{count}} pontos (100 = $1.00)",
+    "pointsToRedeem": "Pontos a resgatar",
+    "contactInformation": "Informações de Contato",
+    "loginForFaster": "Entre para finalizar mais rápido",
+    "fullName": "Nome completo *",
+    "emailAddress": "Endereço de e-mail *",
+    "phoneOptional": "Telefone (opcional)",
+    "loyaltyDiscount": "Desconto de Fidelidade"
   },
   "tableLanding": {
     "loading": "Abrindo o cardápio para a sua mesa…",
