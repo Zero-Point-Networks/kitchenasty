@@ -147,6 +147,9 @@
     "paymentMethod": "Mode de Paiement",
     "creditCard": "Carte Bancaire (Stripe)",
     "cashOnDelivery": "Paiement à la livraison",
+    "payAtCounter": "Payer au comptoir",
+    "dineInTitle": "Sur place",
+    "dineInSubtitle": "Commandez pour votre table — payez maintenant ou au comptoir.",
     "orderSummary": "Récapitulatif",
     "subtotal": "Sous-total",
     "tax": "TVA",
@@ -157,6 +160,16 @@
     "processing": "Traitement en cours...",
     "guestCheckout": "Commander en tant qu'Invité",
     "guestEmail": "E-mail pour le suivi de commande"
+  },
+  "tableLanding": {
+    "loading": "Ouverture du menu pour votre table…",
+    "invalidTitle": "Table introuvable",
+    "invalidBody": "Ce code QR n'est pas valide ou la table n'est plus active. Vous pouvez tout de même consulter le menu.",
+    "browseMenu": "Voir le Menu"
+  },
+  "dineInBanner": {
+    "ordering": "Commande pour",
+    "leave": "Quitter la table"
   },
   "orderConfirmation": {
     "title": "Commande Passée !",

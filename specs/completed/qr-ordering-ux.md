@@ -1,6 +1,6 @@
 # QR Ordering UX Polish
 
-## Status: In Progress
+## Status: Complete
 
 <!-- Status values: Draft | In Progress | Complete | On Hold | Cancelled -->
 <!-- Folder must match status: draft/ | in-progress/ | completed/ | on-hold/ | cancelled/ -->
@@ -153,6 +153,14 @@ This directly fixes the "scan just goes to the menu with no feedback" confusion.
 
 > **Session notes**: e2e adds a "persistent dine-in banner" test (banner visible on `/menu` after scan + survives reload). Docs: updated How-it-works (banner), the QR admin actions (View vs Generate; Regenerate moved into the modal), and added the read-only `GET .../qr` to the API reference. E2E requires a running stack; not executed here. Full suite: **310 tests pass**; server/admin/storefront type-check clean.
 
+### Phase 5: Finalization fixes
+<!-- packages: storefront, admin -->
+
+- [x] Fix: translate the dine-in i18n keys (`checkout.payAtCounter/dineInTitle/dineInSubtitle`, `tableLanding.*`, `dineInBanner.*` — 9 keys) into `de/es/fr/it/pt.json`, which previously fell back to English mid-page for non-English diners `[storefront]` `[~45 LOC]`
+- [x] Fix: drop the redundant `QrModalState.tableName` field in `TableList.tsx` (always mirrored `table.name`) `[admin]` `[~6 LOC]`
+
+> **Session notes** (finalize audit, 2026-07-10): Deep audit of all 10 implementation files found **no bugs** — routes registered, wrapper used at every `setDineIn`/`clear()` call site (incl. `OrderConfirmation`'s Stripe `?paid=true` return), stale-token checkout fails gracefully (400 "Invalid or inactive table", "Leave table" is the escape hatch). The two items above were the only findings (both minor). Locale key parity with `en.json` verified programmatically; each locale matches its existing formality (de=Sie, fr=vous, es/it=tu, pt=você) and reuses its own `browseMenu` wording. Full suite 338 server + 61 shared + 17 e2e-adjacent pass; server/admin/storefront `tsc` clean. Root `npm run lint` is broken repo-wide (no ESLint config has ever existed) — pre-existing, not from this spec.
+
 ### Environment note
 > Developed in a dedicated **git worktree** (`/home/russell/kitchenasty-qrux`) after a second concurrent session switched the shared main working tree mid-Phase-3. Phases 1-2 were already committed/pushed; Phases 3-4 completed in the isolated worktree. No work lost.
 
@@ -199,6 +207,7 @@ Admin (`TableList`) has no unit-test runner in the repo; covered by `tsc -b` + m
 | `packages/storefront/src/components/Layout.tsx` | Render `DineInBanner` |
 | `packages/storefront/src/components/DineInBanner.tsx` | **NEW** — persistent banner |
 | `packages/storefront/src/i18n/locales/en.json` | Banner strings |
+| `packages/storefront/src/i18n/locales/{de,es,fr,it,pt}.json` | Dine-in key translations (finalization) |
 | `e2e/storefront/dine-in.spec.ts` | Banner assertion |
 | `packages/docs/features/qr-ordering.md` | Document View-QR + banner |
 

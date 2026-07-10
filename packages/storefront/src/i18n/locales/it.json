@@ -147,6 +147,9 @@
     "paymentMethod": "Metodo di Pagamento",
     "creditCard": "Carta di Credito (Stripe)",
     "cashOnDelivery": "Pagamento alla consegna",
+    "payAtCounter": "Paga alla cassa",
+    "dineInTitle": "Al tavolo",
+    "dineInSubtitle": "Ordina per il tuo tavolo: paga subito o alla cassa.",
     "orderSummary": "Riepilogo Ordine",
     "subtotal": "Subtotale",
     "tax": "IVA",
@@ -157,6 +160,16 @@
     "processing": "Elaborazione in corso...",
     "guestCheckout": "Ordina come Ospite",
     "guestEmail": "E-mail per aggiornamenti sull'ordine"
+  },
+  "tableLanding": {
+    "loading": "Apertura del menu per il tuo tavolo…",
+    "invalidTitle": "Tavolo non trovato",
+    "invalidBody": "Questo codice QR non è valido o il tavolo non è più attivo. Puoi comunque vedere il menu.",
+    "browseMenu": "Vedi il Menu"
+  },
+  "dineInBanner": {
+    "ordering": "Ordine per",
+    "leave": "Lascia il tavolo"
   },
   "orderConfirmation": {
     "title": "Ordine Effettuato!",

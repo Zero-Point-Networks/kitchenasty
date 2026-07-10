@@ -147,6 +147,9 @@
     "paymentMethod": "Método de Pago",
     "creditCard": "Tarjeta de Crédito (Stripe)",
     "cashOnDelivery": "Pago contra entrega",
+    "payAtCounter": "Pagar en el mostrador",
+    "dineInTitle": "En mesa",
+    "dineInSubtitle": "Pide para tu mesa: paga ahora o en el mostrador.",
     "orderSummary": "Resumen del Pedido",
     "subtotal": "Subtotal",
     "tax": "Impuesto",
@@ -157,6 +160,16 @@
     "processing": "Procesando...",
     "guestCheckout": "Pedido como Invitado",
     "guestEmail": "Correo para actualizaciones del pedido"
+  },
+  "tableLanding": {
+    "loading": "Abriendo el menú para tu mesa…",
+    "invalidTitle": "Mesa no encontrada",
+    "invalidBody": "Este código QR no es válido o la mesa ya no está activa. Aún puedes ver el menú.",
+    "browseMenu": "Ver Menú"
+  },
+  "dineInBanner": {
+    "ordering": "Pidiendo para",
+    "leave": "Salir de la mesa"
   },
   "orderConfirmation": {
     "title": "¡Pedido Realizado!",
