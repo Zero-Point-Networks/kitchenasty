@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Staff can filter orders by dine-in and see a distinct dine-in badge in the order list and Kitchen Display
 - New documentation: "QR / Dine-in Ordering" feature and API reference pages
 
+### Fixed
+
+#### Table Ordering
+- Table lists now sort in natural order, so **Table 2** appears before **Table 10** instead of after **Table 1**. This applies to the admin **Locations → Tables** screen and the **Assign Table** dropdown on a reservation
+
 ## [0.3.0] - 2026-05-14
 
 ### Added
