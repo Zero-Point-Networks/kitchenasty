@@ -1,6 +1,6 @@
 # Table Natural Name Ordering
 
-## Status: In Progress
+## Status: Complete
 
 ## Objective
 
@@ -11,6 +11,7 @@ Sort tables in location table menus by natural name order so alphabetic names co
 1. **Numeric table names sort lexicographically today** - `packages/server/src/controllers/table.controller.ts:22-28` asks Prisma for `orderBy: { name: 'asc' }`, so names such as `Table 1`, `Table 10`, and `Table 2` are returned in string order rather than the expected natural order.
 2. **Location detail embeds the same lexicographic table order** - `packages/server/src/controllers/location.controller.ts:80-86` includes `tables: { orderBy: { name: 'asc' } }`, so callers that load a location with tables can see the same incorrect order.
 3. **The admin table screen trusts API order** - `packages/admin/src/pages/TableList.tsx:42-54` stores `tableRes.data` directly (line 50) and `packages/admin/src/pages/TableList.tsx:284` renders `tables.map(...)` without additional sorting, so the API order is the visible order in the location table menu.
+4. **The reservation detail screen trusts API order too** - `packages/admin/src/pages/ReservationDetail.tsx:53` fetches the same `listTables` endpoint and `:216` renders the "Assign Table" `<select>` options with `tables.map(...)`, so its dropdown shows the same lexicographic order. Found during the `/wf:finalize` audit; it inherits the fix for free because ordering is server-side.
 
 ## Current Architecture
 
@@ -27,7 +28,9 @@ The `GET /api/locations/:id` endpoint in `packages/server/src/controllers/locati
 | `packages/server/src/__tests__/integration/table.test.ts` | Existing integration coverage for table endpoints with mocked Prisma |
 | `packages/server/src/__tests__/integration/location.test.ts` | Existing integration coverage for location endpoints with mocked Prisma |
 | `packages/admin/src/pages/TableList.tsx` | Renders the admin table management list in API order |
+| `packages/admin/src/pages/ReservationDetail.tsx` | Renders the "Assign Table" dropdown in API order |
 | `e2e/admin/tables.spec.ts` | Existing admin table management smoke coverage |
+| `e2e/admin/reservations.spec.ts` | Existing admin reservation smoke coverage |
 
 ## Design
 
@@ -85,6 +88,24 @@ Tasks T1.3, T1.4 and T1.5 can be worked after T1.2 and do not depend on each oth
 >
 > **Blocked check**: `npm run lint` cannot run — no ESLint config is tracked anywhere in the repo and ESLint is not a dependency. Pre-existing on `main`, not caused by this spec. Raised as `specs/draft/restore-eslint-flat-config.md`.
 
+### Phase 2: Finalization Fixes
+<!-- packages: server, admin -->
+
+Raised by the `/wf:finalize` deep audit. No bug was found in the shipped comparator; these close coverage and documentation gaps.
+
+- [x] **T2.1** Document `packages/admin/src/pages/ReservationDetail.tsx` as a second consumer of the ordering contract `[admin]` `[~5 LOC]`
+- [x] **T2.2** Add admin E2E coverage asserting the reservation "Assign Table" `<select>` renders API order verbatim `[admin]` `[~40 LOC]` - depends: T2.1
+- [x] **T2.3** Add Unicode names to the comparator-contract corpus, where `toLowerCase()` can change string length `[server]` `[~5 LOC]`
+- [x] **T2.4** Assert `getLocation` preserves its other included relations through the `{...location, tables}` spread `[server]` `[~10 LOC]`
+
+> **Session notes**: The deep audit found **no bug in the shipped comparator**. An independent reviewer fuzzed 300k random triples plus a Unicode corpus and could not violate antisymmetry, transitivity, reflexivity or totality — which matches the design: steps 1–2 are lexicographic order over the canonical run tuples and step 3 is a strict total order on the raw string, so the composition is a total order by construction.
+>
+> Audit turned up a second consumer nobody had documented: `ReservationDetail.tsx:53` fetches the same `listTables` endpoint for its "Assign Table" dropdown and renders it with no client sort, so it inherited the fix for free. Now covered by an E2E in `e2e/admin/reservations.spec.ts` that feeds a scrambled fixture; temporarily adding a `localeCompare` sort to the component makes it fail, so it is not vacuous.
+>
+> **Raised, not fixed** (pre-existing, outside this spec's blast radius): `specs/draft/express-async-error-handling.md`. Express 4.22.1 does not forward async rejections; `table.controller.ts` and `location.controller.ts` have zero `try/catch`, and no `unhandledRejection` handler exists — so a Prisma rejection on the public `GET /api/locations/:id` kills the process. This predates the spec: `await prisma.location.findUnique` at `table.controller.ts:17` already had the exposure. `sortTablesByName` adds no new reachable throw path (`Table.name` is NOT NULL, Zod-validated, and the comparator is pure and total over strings). That draft also carries the `.max()` bound on table names, which this spec's Out of Scope forbade changing.
+>
+> **E2E gotcha**: the admin E2E suite needs `NODE_ENV=test`, or the 100-req/15-min rate limiter in `app.ts:66-75` starts returning 429 to the login fixture once more than ~4 tests run. Recorded in the project profile.
+
 ## Testing Strategy
 
 ### Unit Tests
@@ -132,6 +153,9 @@ The comparator is a standalone exported utility, so it carries dedicated unit te
 | `e2e/admin/tables.spec.ts` | Add admin UI ordering coverage |
 | `packages/server/src/lib/table-name-sort.ts` | **NEW** — natural table-name comparator |
 | `packages/server/src/__tests__/unit/table-name-sort.test.ts` | **NEW** — unit coverage for the comparator |
+| `e2e/admin/table-fixtures.ts` | **NEW** (finalization) — shared scrambled fixture + route mocks for both admin surfaces |
+| `e2e/admin/reservations.spec.ts` | (finalization) Assign-Table dropdown ordering coverage |
+| `.claude/memory/project-profile.md` | (finalization) Record the broken lint script and the E2E `NODE_ENV=test` / database prerequisites |
 
 ## Documentation Impact
 

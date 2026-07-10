@@ -1,46 +1,16 @@
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures.js';
-
-const LOCATION_ID = 'loc-e2e';
-
-// The order the server would return after natural sorting.
-const NATURAL_ORDER = ['Bob', 'Table 1', 'Table 2', 'Table 10'];
-
-// An order no sort — lexicographic or natural — would ever produce. Rendering
-// this verbatim is what proves the admin screen is a pure pass-through.
-const SCRAMBLED_ORDER = ['Table 10', 'Bob', 'Table 2', 'Table 1'];
-
-function tableRow(name: string, index: number): Record<string, unknown> {
-  return {
-    id: `tbl-${index}`,
-    locationId: LOCATION_ID,
-    name,
-    capacity: 4,
-    isActive: true,
-    qrToken: null,
-    _count: { reservations: 0 },
-  };
-}
+import {
+  LOCATION_ID,
+  NATURAL_TABLE_NAMES,
+  SCRAMBLED_TABLE_NAMES,
+  routeLocationDetail,
+  routeLocationTables,
+} from './table-fixtures.js';
 
 async function routeLocationWithTables(page: Page, names: string[]): Promise<void> {
-  await page.route(`**/api/locations/${LOCATION_ID}`, async (route) => {
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: { id: LOCATION_ID, name: 'E2E Kitchen' } }),
-    });
-  });
-
-  await page.route(`**/api/locations/${LOCATION_ID}/tables`, async (route) => {
-    if (route.request().method() !== 'GET') {
-      await route.continue();
-      return;
-    }
-
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({ success: true, data: names.map(tableRow) }),
-    });
-  });
+  await routeLocationDetail(page);
+  await routeLocationTables(page, names);
 }
 
 async function renderedTableNames(page: Page): Promise<string[]> {
@@ -50,11 +20,11 @@ async function renderedTableNames(page: Page): Promise<string[]> {
 
 test.describe('Admin Table Management', () => {
   test('tables page renders its heading and a row per table', async ({ page }) => {
-    await routeLocationWithTables(page, NATURAL_ORDER);
+    await routeLocationWithTables(page, NATURAL_TABLE_NAMES);
     await page.goto(`/locations/${LOCATION_ID}/tables`);
 
     await expect(page.getByRole('heading', { name: 'Tables' })).toBeVisible();
-    await expect(page.locator('tbody tr')).toHaveCount(NATURAL_ORDER.length);
+    await expect(page.locator('tbody tr')).toHaveCount(NATURAL_TABLE_NAMES.length);
   });
 
   test('location list shows Tables link', async ({ page }) => {
@@ -63,21 +33,18 @@ test.describe('Admin Table Management', () => {
   });
 
   test('renders the natural order the API returned', async ({ page }) => {
-    await routeLocationWithTables(page, NATURAL_ORDER);
+    await routeLocationWithTables(page, NATURAL_TABLE_NAMES);
     await page.goto(`/locations/${LOCATION_ID}/tables`);
 
-    await expect(page.locator('tbody tr')).toHaveCount(NATURAL_ORDER.length);
-    expect(await renderedTableNames(page)).toEqual(NATURAL_ORDER);
+    await expect(page.locator('tbody tr')).toHaveCount(NATURAL_TABLE_NAMES.length);
+    expect(await renderedTableNames(page)).toEqual(NATURAL_TABLE_NAMES);
   });
 
   test('renders API order verbatim and never re-sorts client-side', async ({ page }) => {
-    await routeLocationWithTables(page, SCRAMBLED_ORDER);
+    await routeLocationWithTables(page, SCRAMBLED_TABLE_NAMES);
     await page.goto(`/locations/${LOCATION_ID}/tables`);
 
-    await expect(page.locator('tbody tr')).toHaveCount(SCRAMBLED_ORDER.length);
-
-    // Any client-side sort fails here: a lexicographic one yields
-    // Bob/Table 1/Table 10/Table 2, a natural one yields NATURAL_ORDER.
-    expect(await renderedTableNames(page)).toEqual(SCRAMBLED_ORDER);
+    await expect(page.locator('tbody tr')).toHaveCount(SCRAMBLED_TABLE_NAMES.length);
+    expect(await renderedTableNames(page)).toEqual(SCRAMBLED_TABLE_NAMES);
   });
 });

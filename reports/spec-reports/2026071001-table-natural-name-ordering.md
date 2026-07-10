@@ -16,6 +16,7 @@ Ordering rule: digit runs compare as numbers, letter runs compare case-insensiti
 ## Spec Phases Completed
 
 - Phase 1: Server Natural Table Ordering ✅ (T1.1–T1.5)
+- Phase 2: Finalization Fixes ✅ (T2.1–T2.4)
 
 ## How to Verify
 
@@ -45,15 +46,36 @@ The first implementation compared digit runs with `Number(a) - Number(b)`. The `
 
 Nothing bounds table-name length — `createTableSchema` has no `.max()` and Prisma's `Table.name` is an unbounded `String` — so an admin could reach this. Digit runs are now compared as strings: strip leading zeros, longer run wins, equal-length runs compare lexicographically. That is exact at any length and needs no `BigInt`.
 
+## What the Finalization Audit Found
+
+Every implementation and test file was read end-to-end, and an independent reviewer was tasked with breaking the comparator: 300,000 random fuzz triples plus a hand-built Unicode corpus (`İ`, the `ﬀ` ligature, composed vs decomposed `é`, Arabic-Indic digits, surrogate pairs).
+
+**No bug was found in the shipped code.** That is the expected result, not luck: steps 1–2 of `compareTableNames` are lexicographic order over the canonical run tuples, and step 3 is a strict total order on the raw string, so the composition is antisymmetric and transitive by construction — regardless of what `toLowerCase()` does to any individual run. The Unicode names were added to the shipped contract corpus as regression insurance.
+
+Three gaps were closed:
+
+- **A second consumer nobody had documented.** `packages/admin/src/pages/ReservationDetail.tsx:53` fetches the same `listTables` endpoint to fill its "Assign Table" dropdown and renders it with no client-side sort, so it inherited the fix for free. It appeared in no spec table and had zero coverage. It now has an E2E in `e2e/admin/reservations.spec.ts`; temporarily adding a `localeCompare` sort to the component makes that test fail, so it is not vacuous.
+- **The two E2E surfaces duplicated their scrambled fixture**, which would have let one drift from the other. Both now share `e2e/admin/table-fixtures.ts`.
+- **No test guarded `getLocation`'s `{...location, tables}` spread** against someone later narrowing the response. One now does.
+
+## Raised, Not Fixed
+
+`specs/draft/express-async-error-handling.md` — Express 4.22.1 does not forward rejected promises from `async` handlers; `table.controller.ts` and `location.controller.ts` contain zero `try/catch`; and no `unhandledRejection` handler exists. A Prisma rejection on the public, unauthenticated `GET /api/locations/:id` therefore terminates the whole process, killing every concurrent request.
+
+This is **pre-existing and not caused by this spec**: `await prisma.location.findUnique` at `table.controller.ts:17` already had the exposure. `sortTablesByName` adds no new reachable throw path — `Table.name` is `NOT NULL` in Prisma, Zod-validated as a string, and the comparator is pure and total over strings. Wrapping only the two new call sites in `try/catch` would be theatre while the `await` above them stays unguarded, so the fix belongs in its own spec. That draft also carries the `.max()` bound on table-name length, which this spec's Out of Scope explicitly forbade changing.
+
 ## Testing
 
 | Suite | Result |
 |---|---|
-| `packages/server` (full) | 411 passed (24 files) |
+| `packages/server` (full) | 412 passed (24 files) |
 | `packages/shared` | 17 passed |
-| `e2e/admin/tables.spec.ts` (Playwright, chromium) | 4 passed |
+| `e2e/admin/tables.spec.ts` + `reservations.spec.ts` (Playwright, chromium) | 11 passed |
 | `tsc --noEmit -p packages/server` | clean |
 | `tsc -b` in `packages/admin` | clean |
+| `npm run lint` | **could not run** — see below |
+
+`npm run lint` is broken repo-wide and was never run. See "Follow-Up Raised". Reporting it as "clean" would be false.
 
 23 unit tests live in `packages/server/src/__tests__/unit/table-name-sort.test.ts`, including a five-test comparator-contract block that asserts antisymmetry, reflexivity, transitivity, totality and order-independence across an adversarial corpus (empty strings, leading zeros, case-only ties, 400-digit runs, mid-name digit/letter clashes). Reverting the overflow fix fails 5 of them, so they are not vacuous — this was checked, not assumed.
 
@@ -83,4 +105,6 @@ This is pre-existing and unrelated to this spec. Raised as `specs/draft/restore-
 
 ## Status
 
-Phase 1 is complete; all five tasks (T1.1–T1.5) are checked. The spec is ready for `/wf:finalize`, which owns the `CHANGELOG.md` entry and the move to `specs/completed/`.
+Complete. Both phases are closed — T1.1–T1.5 (implementation) and T2.1–T2.4 (finalization fixes), 9 tasks, 0 unchecked. `/wf:finalize` ran the deep audit, added the `CHANGELOG.md` entry under `### Fixed`, and moved the spec to `specs/completed/`.
+
+Not yet merged to `main`, and not deployed.

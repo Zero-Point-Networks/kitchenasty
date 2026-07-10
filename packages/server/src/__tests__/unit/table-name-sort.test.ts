@@ -130,6 +130,16 @@ describe('compareTableNames — comparator contract', () => {
     `Table ${'9'.repeat(400)}`,
     'Table 12345678901234567890',
     'Table 12345678901234567891',
+    // toLowerCase() is not length-preserving: '\u0130' lowercases to two code
+    // points, and the '\uFB00' ligature does not lowercase to 'ff' at all.
+    '\u0130stanbul',
+    'istanbul',
+    '\uFB00',
+    'ff',
+    'Caf\u00E9', // composed e-acute
+    'Cafe\u0301', // decomposed e + combining acute: same glyph, different string
+    '\u0663', // Arabic-Indic digit three: \d does not match it, so it is an alpha run
+    '\u{1F37D} Patio', // surrogate pair
   ];
 
   const sign = (n: number): number => Math.sign(n);
