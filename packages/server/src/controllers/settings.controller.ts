@@ -3,6 +3,7 @@ import { z } from 'zod';
 import nodemailer from 'nodemailer';
 import prisma from '../lib/db.js';
 import { auditLog } from '../lib/audit.js';
+import { resolveTaxRate } from '../lib/settings.js';
 import type { ReadyChannelToggles } from '../lib/notifications.js';
 
 const updateSettingsSchema = z.object({
@@ -57,6 +58,8 @@ function toPublicSettings(settings: Awaited<ReturnType<typeof getOrCreateSetting
     heroSection: settings.heroSection,
     featuresSection: settings.featuresSection,
     ctaSection: settings.ctaSection,
+    // Tax rate as a decimal fraction (e.g. 0.08), normalized from the stored percentage.
+    taxRate: resolveTaxRate(settings.orderSettings),
     createdAt: settings.createdAt,
     updatedAt: settings.updatedAt,
   };

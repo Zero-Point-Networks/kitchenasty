@@ -146,3 +146,11 @@ export const paymentApi = {
     });
   },
 };
+
+// ── Settings ──────────────────────────────────────────
+export const settingsApi = {
+  // Public site settings; `taxRate` is a decimal fraction (e.g. 0.08).
+  getPublic() {
+    return apiClient<ApiResponse<{ taxRate?: number }>>('/api/settings', { auth: false });
+  },
+};
