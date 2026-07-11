@@ -4,9 +4,9 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
-import { orderApi, loyaltyApi, locationApi } from '@/api/endpoints';
+import { orderApi, loyaltyApi, locationApi, settingsApi } from '@/api/endpoints';
 import { formatCurrency } from '@/lib/formatters';
-import { TAX_RATE, DEFAULT_DELIVERY_FEE } from '@/lib/constants';
+import { DEFAULT_TAX_RATE, DEFAULT_DELIVERY_FEE } from '@/lib/constants';
 import Button from '@/components/ui/Button';
 import TextInput from '@/components/ui/TextInput';
 import EmptyState from '@/components/ui/EmptyState';
@@ -44,9 +44,21 @@ export default function CheckoutScreen() {
   // Busy
   const [isBusy, setIsBusy] = useState(false);
 
+  // Tax rate (decimal fraction) from server settings; falls back to the default.
+  const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
+
   const deliveryFee = orderType === 'delivery' ? DEFAULT_DELIVERY_FEE : 0;
-  const tax = subtotal * TAX_RATE;
+  const tax = subtotal * taxRate;
   const total = subtotal + tax + deliveryFee - loyaltyDiscount;
+
+  useEffect(() => {
+    settingsApi
+      .getPublic()
+      .then((res) => {
+        if (typeof res.data?.taxRate === 'number') setTaxRate(res.data.taxRate);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     locationApi

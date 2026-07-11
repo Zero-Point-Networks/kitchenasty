@@ -6,6 +6,7 @@ import { isPointInPolygon } from '../lib/geo.js';
 import { sendEmail, orderConfirmationEmail, orderStatusEmail } from '../lib/email.js';
 import { notifyOrderReady, resolveContactEmail } from '../lib/notifications.js';
 import { auditLog } from '../lib/audit.js';
+import { resolveTaxRate } from '../lib/settings.js';
 
 const orderItemOptionSchema = z.object({
   menuOptionValueId: z.string().min(1),
@@ -288,8 +289,9 @@ export async function createOrder(req: Request, res: Response): Promise<void> {
     }
   }
 
-  const TAX_RATE = 0.08;
-  const tax = subtotal * TAX_RATE;
+  const siteSettings = await prisma.siteSettings.findUnique({ where: { id: 'default' } });
+  const taxRate = resolveTaxRate(siteSettings?.orderSettings);
+  const tax = subtotal * taxRate;
   const total = subtotal + tax + deliveryFee - loyaltyDiscount;
 
   const order = await prisma.order.create({

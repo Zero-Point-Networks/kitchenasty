@@ -7,7 +7,8 @@ import { useAuth } from '../context/AuthContext.js';
 type OrderType = 'delivery' | 'pickup';
 type PaymentMethod = 'cash' | 'stripe' | 'paypal';
 
-const TAX_RATE = 0.08;
+// Fallback tax rate (decimal fraction) used until server settings load or if unavailable.
+const DEFAULT_TAX_RATE = 0.08;
 
 export default function Checkout() {
   const { t } = useTranslation();
@@ -44,9 +45,20 @@ export default function Checkout() {
   const [loyaltyRedeem, setLoyaltyRedeem] = useState(0);
   const loyaltyDiscount = loyaltyRedeem / 100;
 
-  const tax = subtotal * TAX_RATE;
+  const [taxRate, setTaxRate] = useState(DEFAULT_TAX_RATE);
+  const tax = subtotal * taxRate;
   const currentDeliveryFee = !isDineIn && orderType === 'delivery' ? deliveryFee : 0;
   const total = subtotal + tax + currentDeliveryFee - loyaltyDiscount;
+
+  // Fetch tax rate from server settings; keep the default if unavailable.
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (typeof data.data?.taxRate === 'number') setTaxRate(data.data.taxRate);
+      })
+      .catch(() => {});
+  }, []);
 
   // Check busy mode on mount
   useEffect(() => {
